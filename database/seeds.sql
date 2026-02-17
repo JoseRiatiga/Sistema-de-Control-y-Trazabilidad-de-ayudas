@@ -9,7 +9,8 @@ INSERT INTO tipos_ayuda (id, nombre, descripcion, unidad) VALUES
 (gen_random_uuid(), 'Leche', 'Leche en polvo por kilogramo', 'Kg'),
 (gen_random_uuid(), 'Medicamentos', 'Medicamentos varios', 'Unidad'),
 (gen_random_uuid(), 'Mantas', 'Mantas para abrigo', 'Unidad'),
-(gen_random_uuid(), 'Agua Potable', 'Garrafones de agua', 'Galón');
+(gen_random_uuid(), 'Agua Potable', 'Garrafones de agua', 'Galón'),
+(gen_random_uuid(), 'Donaciones', 'Donaciones', 'Donación');
 
 -- Beneficiarios de Ejemplo - Colombia (Múltiples municipios)
 INSERT INTO censados (id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, latitud, longitud, miembros_familia) VALUES

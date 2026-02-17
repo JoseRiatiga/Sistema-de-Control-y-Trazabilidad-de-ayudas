@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
+import { WAREHOUSE_LOCATIONS } from '../utils/warehouseLocations';
 import './InventoryManagement.css';
 
 function InventoryManagement() {
@@ -12,6 +13,7 @@ function InventoryManagement() {
   
   // Estados para el formulario de agregación
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null); // Nuevo: para saber si estamos editando
   const [aidTypes, setAidTypes] = useState([]);
   const [loadingAidTypes, setLoadingAidTypes] = useState(false);
   const [formData, setFormData] = useState({
@@ -70,6 +72,16 @@ function InventoryManagement() {
     }
   }, [showForm, fetchAidTypes]);
 
+  const getSelectedAidType = () => {
+    if (!formData.tipo_ayuda_id) return null;
+    return aidTypes.find(aid => aid.id === formData.tipo_ayuda_id);
+  };
+
+  const isDonations = () => {
+    const selectedAid = getSelectedAidType();
+    return selectedAid && selectedAid.nombre.toLowerCase() === 'donaciones';
+  };
+
   const calculateTotalValue = () => {
     return inventory.reduce((total, item) => {
       const value = (parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0);
@@ -79,9 +91,10 @@ function InventoryManagement() {
 
   const validateForm = () => {
     const errors = {};
+    const isDonation = aidTypes.some(aid => aid.id === formData.tipo_ayuda_id && aid.nombre.toLowerCase() === 'donaciones');
     
     if (!formData.tipo_ayuda_id) errors.tipo_ayuda_id = 'Selecciona un tipo de ayuda';
-    if (!formData.cantidad || formData.cantidad <= 0) errors.cantidad = 'La cantidad debe ser mayor a 0';
+    if (!isDonation && (!formData.cantidad || formData.cantidad <= 0)) errors.cantidad = 'La cantidad debe ser mayor a 0';
     if (!formData.municipio) errors.municipio = 'Selecciona un municipio';
     if (!formData.costo_unitario || formData.costo_unitario < 0) errors.costo_unitario = 'Ingresa un costo unitario válido';
     
@@ -91,10 +104,27 @@ function InventoryManagement() {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+    let updatedData = {
+      ...formData,
       [name]: value
-    }));
+    };
+    
+    // Si cambia el tipo de ayuda
+    if (name === 'tipo_ayuda_id') {
+      const selectedAid = aidTypes.find(aid => aid.id === value);
+      if (selectedAid && selectedAid.nombre.toLowerCase() === 'donaciones') {
+        // Para donaciones, establecer cantidad a 1 (no aplica pero necesario para la BD)
+        updatedData.cantidad = '1';
+      }
+    }
+    
+    // Si cambia el municipio, actualizar automáticamente la ubicación
+    if (name === 'municipio' && WAREHOUSE_LOCATIONS[value]) {
+      updatedData.ubicacion_almacen = WAREHOUSE_LOCATIONS[value];
+    }
+    
+    setFormData(updatedData);
+    
     // Limpiar error del campo cuando el usuario empieza a escribir
     if (formErrors[name]) {
       setFormErrors(prev => ({
@@ -123,10 +153,20 @@ function InventoryManagement() {
         ubicacion_almacen: formData.ubicacion_almacen || ''
       };
 
-      await axios.post('http://localhost:5000/api/inventory', inventoryData, { headers });
+      let response;
+      if (editingId) {
+        // Editar inventario existente
+        response = await axios.put(`http://localhost:5000/api/inventory/${editingId}`, inventoryData, { headers });
+        setSuccessMessage(`✓ Inventario actualizado correctamente`);
+      } else {
+        // Crear nuevo inventario
+        response = await axios.post('http://localhost:5000/api/inventory', inventoryData, { headers });
+        let successMsg = response.data.isUpdate
+          ? `✓ Cantidad actualizada correctamente a ${response.data.inventory.cantidad} unidades`
+          : '✓ Nuevo item de inventario agregado correctamente';
+        setSuccessMessage(successMsg);
+      }
       
-      // Éxito
-      setSuccessMessage('Inventario agregado correctamente');
       setFormData({
         tipo_ayuda_id: '',
         cantidad: '',
@@ -134,21 +174,67 @@ function InventoryManagement() {
         municipio: '',
         ubicacion_almacen: ''
       });
+      setEditingId(null);
       setShowForm(false);
       
       // Recargar inventario
       fetchInventory();
       
-      // Limpiar mensaje después de 3 segundos
-      setTimeout(() => setSuccessMessage(''), 3000);
+      // Limpiar mensaje después de 4 segundos
+      setTimeout(() => setSuccessMessage(''), 4000);
     } catch (err) {
-      setError('Error al agregar inventario: ' + (err.response?.data?.message || err.message));
+      setError('Error al guardar inventario: ' + (err.response?.data?.message || err.message));
       console.error(err);
     }
   };
 
   const getUniqueМunicipalities = () => {
     return COLOMBIAN_MUNICIPALITIES;
+  };
+
+  const handleEditInventory = (item) => {
+    setFormData({
+      tipo_ayuda_id: item.tipo_ayuda_id,
+      cantidad: item.cantidad,
+      costo_unitario: item.costo_unitario,
+      municipio: item.municipio,
+      ubicacion_almacen: item.ubicacion_almacen
+    });
+    setEditingId(item.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setFormData({
+      tipo_ayuda_id: '',
+      cantidad: '',
+      costo_unitario: '',
+      municipio: '',
+      ubicacion_almacen: ''
+    });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const handleDeleteInventory = async (inventoryId, aidTypeName, cantidad) => {
+    if (window.confirm(`¿Está seguro que desea eliminar este inventario?\n\n${aidTypeName} (${cantidad} unidades)`)) {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        
+        await axios.delete(`http://localhost:5000/api/inventory/${inventoryId}`, { headers });
+        
+        setSuccessMessage('✓ Inventario eliminado correctamente');
+        fetchInventory();
+        
+        // Limpiar mensaje después de 3 segundos
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } catch (err) {
+        setError('Error al eliminar inventario: ' + (err.response?.data?.message || err.message));
+        console.error(err);
+      }
+    }
   };
 
   return (
@@ -205,7 +291,7 @@ function InventoryManagement() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="cantidad">Cantidad: *</label>
+                <label htmlFor="cantidad">Cantidad: {!isDonations() && '*'}</label>
                 <input
                   type="number"
                   id="cantidad"
@@ -214,7 +300,10 @@ function InventoryManagement() {
                   onChange={handleFormChange}
                   min="1"
                   placeholder="Ej: 100"
+                  disabled={isDonations()}
+                  className={isDonations() ? 'input-disabled' : ''}
                 />
+                {isDonations() && <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>No aplica para donaciones</small>}
                 {formErrors.cantidad && <span className="error-message">{formErrors.cantidad}</span>}
               </div>
 
@@ -256,14 +345,18 @@ function InventoryManagement() {
                   id="ubicacion_almacen"
                   name="ubicacion_almacen"
                   value={formData.ubicacion_almacen}
-                  onChange={handleFormChange}
-                  placeholder="Ej: Bodega Centro, Piso 2"
+                  readOnly
+                  className="input-readonly"
+                  placeholder="Se asigna automáticamente según el municipio"
                 />
+                <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>
+                  La ubicación se asigna automáticamente según el municipio seleccionado
+                </small>
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-success">Guardar Inventario</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-success">{editingId ? '✏️ Guardar cambios' : '➕ Agregar al Inventario'}</button>
+                <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>Cancelar</button>
               </div>
             </form>
           </div>
@@ -290,20 +383,40 @@ function InventoryManagement() {
                       <th>Costo Unitario</th>
                       <th>Valor Total</th>
                       <th>Ubicación</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {inventory.map(item => (
+                    {inventory.map(item => {
+                      const isDonationItem = item.aid_type_name && item.aid_type_name.toLowerCase() === 'donaciones';
+                      return (
                       <tr key={item.id}>
                         <td>{item.municipio}</td>
                         <td>{item.aid_type_name}</td>
-                        <td>{item.cantidad || 0}</td>
-                        <td>{item.unidad}</td>
+                        <td className={isDonationItem ? 'donation-cell' : ''}>{isDonationItem ? 'N/A' : (item.cantidad || 0)}</td>
+                        <td className={isDonationItem ? 'donation-cell' : ''}>{isDonationItem ? 'N/A' : item.unidad}</td>
                         <td>${(parseFloat(item.costo_unitario) || 0).toFixed(2)}</td>
-                        <td>${((parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0)).toFixed(2)}</td>
+                        <td>${isDonationItem ? (parseFloat(item.costo_unitario) || 0).toFixed(2) : ((parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0)).toFixed(2)}</td>
                         <td>{item.ubicacion_almacen}</td>
+                        <td>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleEditInventory(item)}
+                            title="Editar inventario"
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteInventory(item.id, item.aid_type_name, item.cantidad)}
+                            title="Eliminar inventario"
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
                 <div className="summary">

@@ -17,4 +17,10 @@ router.get('/', InventoryController.getAll);
 // Actualizar cantidad (solo admin)
 router.patch('/:id', verifyRole(['administrador']), InventoryController.updateQuantity);
 
+// Actualizar inventario completo (solo admin)
+router.put('/:id', verifyRole(['administrador']), InventoryController.update);
+
+// Eliminar inventario (solo admin)
+router.delete('/:id', verifyRole(['administrador']), InventoryController.delete);
+
 module.exports = router;

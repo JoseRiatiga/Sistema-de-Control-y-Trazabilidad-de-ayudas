@@ -79,6 +79,21 @@
   background-color: #7f8c8d;
 }
 
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .inventory-form {
   background-color: #f8f9fa;
   padding: 25px;
@@ -134,6 +149,14 @@
   cursor: not-allowed;
 }
 
+.form-group input.input-readonly {
+  background-color: #e8f4f8;
+  cursor: default;
+  border-color: #3498db;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
 .error-message {
   color: #e74c3c;
   font-size: 12px;
@@ -182,4 +205,53 @@
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+.inventory-management table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-management table thead {
+  background-color: #2c3e50;
+}
+
+.inventory-management table th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #34495e;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.inventory-management table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+  color: #2c3e50;
+}
+
+.inventory-management table tbody tr {
+  background-color: white;
+  transition: background-color 0.2s ease;
+}
+
+.inventory-management table tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.inventory-management table tbody tr:hover {
+  background-color: #ecf0f1;
+}
+.donation-cell {
+  background-color: #f0f8ff;
+  font-style: italic;
+  color: #7f8c8d;
+}
+
+.input-disabled {
+  background-color: #ecf0f1;
+  cursor: not-allowed;
+  opacity: 0.6;
 }

@@ -112,6 +112,26 @@ class AuthController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  static async deleteUser(req, res) {
+    try {
+      const userId = req.params.id;
+      
+      // No permitir que un usuario se elimine a sí mismo
+      if (userId === req.userId) {
+        return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
+      }
+      
+      const deletedUser = await User.delete(userId);
+      return res.json({ 
+        message: 'Usuario eliminado correctamente',
+        deletedUser 
+      });
+    } catch (error) {
+      console.error('Delete user error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 // Controlador de Censo (Beneficiarios)
@@ -280,8 +300,25 @@ class InventoryController {
   static async create(req, res) {
     try {
       const { Inventory } = require('../models');
-      const inventory = await Inventory.create(req.body);
-      return res.status(201).json({ message: 'Inventario creado', inventory });
+      const result = await Inventory.create(req.body);
+      
+      const statusCode = result.isUpdate ? 200 : 201;
+      const message = result.isUpdate 
+        ? 'Cantidad de inventario actualizada (item existente encontrado)'
+        : 'Nuevo item de inventario creado';
+      
+      return res.status(statusCode).json({ 
+        message,
+        isUpdate: result.isUpdate,
+        inventory: {
+          id: result.id,
+          tipo_ayuda_id: result.tipo_ayuda_id,
+          cantidad: result.cantidad,
+          costo_unitario: result.costo_unitario,
+          municipio: result.municipio,
+          ubicacion_almacen: result.ubicacion_almacen
+        }
+      });
     } catch (error) {
       console.error('Create inventory error:', error);
       return res.status(500).json({ error: error.message });
@@ -318,6 +355,37 @@ class InventoryController {
       return res.json({ message: 'Inventario actualizado', inventory });
     } catch (error) {
       console.error('Update inventory error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async update(req, res) {
+    try {
+      const { Inventory } = require('../models');
+      const { cantidad, costo_unitario, municipio, ubicacion_almacen } = req.body;
+      const inventory = await Inventory.update(req.params.id, {
+        cantidad,
+        costo_unitario,
+        municipio,
+        ubicacion_almacen
+      });
+      return res.json({ message: 'Inventario actualizado correctamente', inventory });
+    } catch (error) {
+      console.error('Update inventory error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async delete(req, res) {
+    try {
+      const { Inventory } = require('../models');
+      const deletedInventory = await Inventory.delete(req.params.id);
+      return res.json({ 
+        message: 'Inventario eliminado correctamente', 
+        deletedInventory 
+      });
+    } catch (error) {
+      console.error('Delete inventory error:', error);
       return res.status(500).json({ error: error.message });
     }
   }

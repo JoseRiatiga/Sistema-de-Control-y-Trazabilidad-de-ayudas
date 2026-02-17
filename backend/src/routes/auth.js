@@ -1,6 +1,6 @@
 const express = require('express');
 const { AuthController } = require('../controllers');
-const { verifyToken, setCurrentUser } = require('../middleware/auth');
+const { verifyToken, setCurrentUser, verifyRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -12,5 +12,11 @@ router.post('/login', AuthController.login);
 router.use(verifyToken, setCurrentUser);
 router.get('/profile', AuthController.getProfile);
 router.get('/users', AuthController.getAllUsers);
+
+// Crear usuario (solo administrador)
+router.post('/create-user', verifyRole(['administrador']), AuthController.register);
+
+// Eliminar usuario (solo administrador)
+router.delete('/delete-user/:id', verifyRole(['administrador']), AuthController.deleteUser);
 
 module.exports = router;

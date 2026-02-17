@@ -9,6 +9,7 @@ import AidRegistration from './pages/AidRegistration';
 import InventoryManagement from './pages/InventoryManagement';
 import Reports from './pages/Reports';
 import AuditTrail from './pages/AuditTrail';
+import UserManagement from './pages/UserManagement';
 import NavBar from './components/NavBar';
 
 // Contexto para autenticación
@@ -71,6 +72,10 @@ function App() {
           <Route
             path="/audit"
             element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <AuditTrail /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/users"
+            element={isAuthenticated && user.rol === 'administrador' ? <UserManagement /> : <Navigate to="/dashboard" />}
           />
           <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} />} />
         </Routes>

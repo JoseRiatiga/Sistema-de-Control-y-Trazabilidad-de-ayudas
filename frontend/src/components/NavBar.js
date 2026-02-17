@@ -25,6 +25,9 @@ function NavBar({ onLogout }) {
         {(user.rol === 'administrador' || user.rol === 'auditor') && (
           <Link to="/audit">Auditoría</Link>
         )}
+        {user.rol === 'administrador' && (
+          <Link to="/users">Gestión de Usuarios</Link>
+        )}
         <div className="user-info">
           <span>{user.nombre} ({user.rol})</span>
           <button className="btn btn-logout" onClick={onLogout}>

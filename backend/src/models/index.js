@@ -49,6 +49,23 @@ class User {
     const result = await global.db.query(query, values);
     return result.rows;
   }
+
+  static async delete(id) {
+    // Soft delete: marcar como inactivo en lugar de eliminar físicamente
+    const query = `
+      UPDATE usuarios
+      SET activo = false, actualizado_en = CURRENT_TIMESTAMP
+      WHERE id = $1 AND rol != 'administrador'
+      RETURNING id, nombre, email, rol
+    `;
+    const result = await global.db.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Usuario no encontrado o no puede ser eliminado');
+    }
+    
+    return result.rows[0];
+  }
 }
 
 // Modelo para Censados (Beneficiarios)
@@ -221,13 +238,49 @@ class AidDelivery {
 // Modelo para Inventario
 class Inventory {
   static async create(inventoryData) {
+    // Primero verificar si existe un item similar (mismo tipo, municipio y costo)
+    // Nota: No se considera ubicacion_almacen para evitar duplicados
+    const findQuery = `
+      SELECT id, cantidad FROM inventario
+      WHERE tipo_ayuda_id = $1 
+      AND municipio = $2 
+      AND costo_unitario = $3
+      LIMIT 1
+    `;
+    
+    const findValues = [
+      inventoryData.tipo_ayuda_id,
+      inventoryData.municipio,
+      inventoryData.costo_unitario
+    ];
+    
+    const existingResult = await global.db.query(findQuery, findValues);
+    
+    // Si existe, actualizar la cantidad sumando
+    if (existingResult.rows.length > 0) {
+      const existingId = existingResult.rows[0].id;
+      const existingQuantity = existingResult.rows[0].cantidad;
+      const newQuantity = existingQuantity + parseInt(inventoryData.cantidad);
+      
+      const updateQuery = `
+        UPDATE inventario
+        SET cantidad = $2, actualizado_en = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const result = await global.db.query(updateQuery, [existingId, newQuantity]);
+      return { ...result.rows[0], isUpdate: true, message: `Cantidad actualizada de ${existingQuantity} a ${newQuantity}` };
+    }
+    
+    // Si no existe, crear uno nuevo
     const id = uuidv4();
-    const query = `
+    const createQuery = `
       INSERT INTO inventario (id, tipo_ayuda_id, cantidad, costo_unitario, municipio, ubicacion_almacen)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
-    const values = [
+    const createValues = [
       id,
       inventoryData.tipo_ayuda_id,
       inventoryData.cantidad,
@@ -236,8 +289,8 @@ class Inventory {
       inventoryData.ubicacion_almacen
     ];
     
-    const result = await global.db.query(query, values);
-    return result.rows[0];
+    const result = await global.db.query(createQuery, createValues);
+    return { ...result.rows[0], isUpdate: false, message: 'Nuevo item de inventario creado' };
   }
 
   static async updateQuantity(inventoryId, cantidad) {
@@ -272,6 +325,33 @@ class Inventory {
     `;
     const result = await global.db.query(query);
     return result.rows;
+  }
+
+  static async update(inventoryId, { cantidad, costo_unitario, municipio, ubicacion_almacen }) {
+    const query = `
+      UPDATE inventario
+      SET cantidad = $2, costo_unitario = $3, municipio = $4, ubicacion_almacen = $5, actualizado_en = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    const result = await global.db.query(query, [inventoryId, cantidad, costo_unitario, municipio, ubicacion_almacen]);
+    if (result.rows.length === 0) {
+      throw new Error('Inventario no encontrado');
+    }
+    return result.rows[0];
+  }
+
+  static async delete(inventoryId) {
+    const query = `
+      DELETE FROM inventario
+      WHERE id = $1
+      RETURNING id, cantidad, municipio
+    `;
+    const result = await global.db.query(query, [inventoryId]);
+    if (result.rows.length === 0) {
+      throw new Error('Inventario no encontrado');
+    }
+    return result.rows[0];
   }
 }
 
