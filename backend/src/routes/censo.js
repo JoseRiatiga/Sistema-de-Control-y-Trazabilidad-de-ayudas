@@ -13,7 +13,7 @@ router.post('/', CensoController.create);
 // Obtener beneficiarios
 router.get('/', CensoController.getAll);
 router.get('/municipality/:municipality', CensoController.getByMunicipality);
-router.get('/identification/:identification', CensoController.searchByIdentification);
+router.get('/cedula/:cedula', CensoController.searchByIdentification);
 router.get('/:id', CensoController.getById);
 
 module.exports = router;

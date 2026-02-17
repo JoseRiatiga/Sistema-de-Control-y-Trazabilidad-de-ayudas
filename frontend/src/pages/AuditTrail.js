@@ -129,11 +129,11 @@ function AuditTrail() {
                   <tbody>
                     {alertData.map(alert => (
                       <tr key={alert.id}>
-                        <td>{alert.first_name} {alert.last_name}</td>
-                        <td>{alert.identification}</td>
+                        <td>{alert.primer_nombre} {alert.primer_apellido || ''}</td>
+                        <td>{alert.cedula || alert.identification}</td>
                         <td>{alert.aid_type_name}</td>
-                        <td>{new Date(alert.last_delivery_date).toLocaleDateString()}</td>
-                        <td>{alert.days_since_last_delivery}</td>
+                        <td>{new Date(alert.last_delivery_date || alert.ultima_entrega).toLocaleDateString()}</td>
+                        <td>{alert.days_since_last_delivery || alert.dias_desde}</td>
                         <td>
                           <span className={`badge badge-${alert.alert_status}`}>
                             {alert.alert_status}
@@ -185,12 +185,12 @@ function AuditTrail() {
                   <tbody>
                     {auditData.map(entry => (
                       <tr key={entry.id}>
-                        <td>{new Date(entry.delivery_date).toLocaleDateString()}</td>
-                        <td>{entry.first_name} {entry.last_name}</td>
+                        <td>{new Date(entry.fecha_entrega || entry.delivery_date).toLocaleDateString()}</td>
+                        <td>{entry.primer_nombre} {entry.primer_apellido || ''}</td>
                         <td>{entry.aid_type_name}</td>
-                        <td>{entry.quantity}</td>
+                        <td>{entry.cantidad || entry.quantity}</td>
                         <td>{entry.operator_name}</td>
-                        <td>{entry.municipality}</td>
+                        <td>{entry.municipio || entry.municipality}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -218,11 +218,11 @@ function AuditTrail() {
                   <tbody>
                     {auditData.slice(0, 50).map(entry => (
                       <tr key={entry.id}>
-                        <td>{new Date(entry.timestamp).toLocaleString()}</td>
+                        <td>{new Date(entry.fecha || entry.timestamp).toLocaleString()}</td>
                         <td>{entry.user_name || 'Sistema'}</td>
-                        <td>{entry.action}</td>
-                        <td>{entry.table_name}</td>
-                        <td>{entry.action === 'UPDATE' ? 'Modificado' : 'Creado'}</td>
+                        <td>{entry.accion || entry.action}</td>
+                        <td>{entry.nombre_tabla || entry.table_name}</td>
+                        <td>{(entry.accion || entry.action) === 'UPDATE' ? 'Modificado' : 'Creado'}</td>
                       </tr>
                     ))}
                   </tbody>

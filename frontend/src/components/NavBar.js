@@ -13,20 +13,20 @@ function NavBar({ onLogout }) {
       </div>
       <div className="navbar-links">
         <Link to="/dashboard">Dashboard</Link>
-        {(user.role === 'operador' || user.role === 'admin') && (
+        {(user.rol === 'operador' || user.rol === 'administrador') && (
           <Link to="/aid-registration">Registrar Ayuda</Link>
         )}
-        {(user.role === 'operador' || user.role === 'admin') && (
+        {(user.rol === 'operador' || user.rol === 'administrador') && (
           <Link to="/inventory">Inventario</Link>
         )}
-        {(user.role === 'admin' || user.role === 'auditor') && (
+        {(user.rol === 'administrador' || user.rol === 'auditor') && (
           <Link to="/reports">Reportes</Link>
         )}
-        {(user.role === 'admin' || user.role === 'auditor') && (
+        {(user.rol === 'administrador' || user.rol === 'auditor') && (
           <Link to="/audit">Auditoría</Link>
         )}
         <div className="user-info">
-          <span>{user.name} ({user.role})</span>
+          <span>{user.nombre} ({user.rol})</span>
           <button className="btn btn-logout" onClick={onLogout}>
             Cerrar Sesión
           </button>

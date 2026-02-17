@@ -163,4 +163,4 @@ SELECT
   COUNT(CASE WHEN dad.estado_alerta = 'resuelta' THEN 1 END) AS alertas_resueltas
 FROM alertas_duplicidad dad
 JOIN censados c ON dad.censado_id = c.id
-GROUP BY c.municipality;
+GROUP BY c.municipio;

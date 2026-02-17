@@ -32,7 +32,7 @@ const verifyRole = (allowedRoles) => {
 // Middleware para logging de auditoría
 const auditLog = async (action, tableName, recordId, oldValues = null, newValues = null) => {
   const query = `
-    INSERT INTO audit_logs (id, action, table_name, record_id, user_id, old_values, new_values, timestamp)
+    INSERT INTO bitacora_auditoria (id, accion, nombre_tabla, id_registro, usuario_id, valores_antiguos, valores_nuevos, fecha)
     VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
   `;
   
@@ -55,41 +55,41 @@ const auditLog = async (action, tableName, recordId, oldValues = null, newValues
 
 // Middleware para validar duplicidad de entregas
 const checkDuplicateDelivery = async (req, res, next) => {
-  const { censado_id, aid_type_id } = req.body;
+  const { censado_id, tipo_ayuda_id } = req.body;
   
-  if (!censado_id || !aid_type_id) {
+  if (!censado_id || !tipo_ayuda_id) {
     return next();
   }
   
   try {
     const query = `
-      SELECT * FROM aid_deliveries
-      WHERE censado_id = $1 AND aid_type_id = $2
-      AND delivery_date >= NOW() - INTERVAL '30 days'
+      SELECT * FROM entregas_ayuda
+      WHERE censado_id = $1 AND tipo_ayuda_id = $2
+      AND fecha_entrega >= NOW() - INTERVAL '30 days'
     `;
     
-    const result = await global.db.query(query, [censado_id, aid_type_id]);
+    const result = await global.db.query(query, [censado_id, tipo_ayuda_id]);
     
     if (result.rows.length > 0) {
       // Crear alerta de duplicidad
       const alertQuery = `
-        INSERT INTO duplicate_alerts (id, censado_id, aid_type_id, last_delivery_date, days_since_last_delivery)
+        INSERT INTO alertas_duplicidad (id, censado_id, tipo_ayuda_id, ultima_entrega, dias_desde)
         VALUES ($1, $2, $3, $4, $5)
       `;
       
-      const daysSince = Math.floor((Date.now() - new Date(result.rows[0].delivery_date).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSince = Math.floor((Date.now() - new Date(result.rows[0].fecha_entrega).getTime()) / (1000 * 60 * 60 * 24));
       
       await global.db.query(alertQuery, [
         uuidv4(),
         censado_id,
-        aid_type_id,
-        result.rows[0].delivery_date,
+        tipo_ayuda_id,
+        result.rows[0].fecha_entrega,
         daysSince
       ]);
       
       res.locals.duplicateAlert = {
         message: 'Alerta: Este beneficiario ya recibió esta ayuda recientemente',
-        lastDelivery: result.rows[0].delivery_date,
+        lastDelivery: result.rows[0].fecha_entrega,
         daysSince: daysSince
       };
     }

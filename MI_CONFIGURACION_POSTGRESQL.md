@@ -1,4 +1,4 @@
-# MI CONFIGURACIÓN DE POSTGRESQL
+# MI CONFIGURACIÓN DE POSTGRESQL - COLOMBIA
 
 ## Datos de tu instalación
 
@@ -8,7 +8,22 @@ Contraseña: Jr3003
 Puerto: 5432
 Región: Spanish (Colombia)
 Codificación: UTF-8
+Datos: Colombia - Sistema de Ayudas Humanitarias
 ```
+
+---
+
+## MUNICIPIOS DEL SISTEMA
+
+El sistema incluye los siguientes municipios de Colombia:
+
+- 🏛️ **Bogotá** (Capital) - Cundinamarca
+- 🏙️ **Medellín** - Antioquia
+- 🏖️ **Cali** - Valle del Cauca
+- 🏝️ **Barranquilla** - Atlántico
+- ⛰️ **Bucaramanga** - Santander
+
+Los datos de ejemplo incluyen beneficiarios de estos municipios con cédulas válidas de Colombia.
 
 ---
 
@@ -56,7 +71,7 @@ Codificación: UTF-8
 4. Presiona **F5** o el botón "Execute" (▶)
 5. Verás mensajes como: "CREATE TABLE", "CREATE VIEW", etc.
 
-#### Paso 5: Carga los datos de ejemplo
+#### Paso 5: Carga los datos de ejemplo (Colombia)
 
 1. En el mismo Query Tool, borra el código anterior (Ctrl+A, Delete)
 2. Copia TODO el contenido de:
@@ -66,7 +81,7 @@ Codificación: UTF-8
 3. Presiona **F5**
 4. Verás mensajes como: "INSERT", "UPDATE", etc.
 
-✅ **¡Listo! Tu base de datos está lista**
+✅ **¡Listo! Tu base de datos está lista con datos de Colombia**
 
 ---
 
@@ -101,13 +116,13 @@ Te pedirá contraseña nuevamente: `Jr3003`
 Finalmente:
 
 ```powershell
-# Carga datos de ejemplo
+# Carga datos de ejemplo (Colombia)
 psql -U postgres -d ayudas_humanitarias -f database/seeds.sql
 ```
 
 Contraseña: `Jr3003`
 
-✅ **¡Listo! Tu base de datos está lista**
+✅ **¡Listo! Tu base de datos está lista con datos de Colombia**
 
 ---
 
@@ -124,22 +139,44 @@ Contraseña: `Jr3003`
 **Deberías ver algo así:**
 
 ```
-                    List of relations
- Schema |       Name        | Type  |  Owner
---------+-------------------+-------+----------
- public | aid_deliveries    | table | postgres
- public | aid_types         | table | postgres
- public | audit_logs        | table | postgres
- public | censados          | table | postgres
- public | delivery_receipt  | table | postgres
- public | duplicate_alerts  | table | postgres
- public | inventory         | table | postgres
- public | reports           | table | postgres
- public | users             | table | postgres
+                      List of relations
+ Schema |          Name           | Type  |  Owner
+--------+-------------------------+-------+----------
+ public | alertas_duplicidad      | table | postgres
+ public | bitacora_auditoria      | table | postgres
+ public | censados                | table | postgres
+ public | comprobantes_entrega    | table | postgres
+ public | entregas_ayuda          | table | postgres
+ public | inventario              | table | postgres
+ public | reportes                | table | postgres
+ public | tipos_ayuda             | table | postgres
+ public | usuarios                | table | postgres
 (9 rows)
 ```
 
 Si ves esto, ¡todo está perfecto! ✅
+
+---
+
+## VER LOS DATOS DE EJEMPLO (COLOMBIA)
+
+Para ver los beneficiarios registrados de Colombia:
+
+```powershell
+psql -U postgres -d ayudas_humanitarias -c "SELECT primer_nombre, primer_apellido, municipio, cedula FROM censados;"
+```
+
+Resultado esperado:
+```
+ primer_nombre | primer_apellido |   municipio   |    cedula
+---------------+-----------------+---------------+-----------
+ Maria         | García          | Bogotá        | 1098765432
+ Carlos        | López           | Medellín      | 1012345678
+ Juan          | Martínez        | Cali          | 1023456789
+ Rosa          | Fernández       | Barranquilla  | 1034567890
+ Pedro         | Rodríguez       | Bucaramanga   | 1045678901
+(5 rows)
+```
 
 ---
 
@@ -150,7 +187,7 @@ Después de crear la BD, necesitarás estos datos en `backend/.env`:
 ```
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=ayudas_humanitaria
+DB_NAME=ayudas_humanitarias
 DB_USER=postgres
 DB_PASSWORD=Jr3003
 ```
@@ -170,10 +207,13 @@ psql -U postgres -d ayudas_humanitarias
 psql -U postgres -d ayudas_humanitarias -c "\dt"
 
 # Ver estructura de una tabla
-psql -U postgres -d ayudas_humanitarias -c "\d users"
+psql -U postgres -d ayudas_humanitarias -c "\d usuarios"
 
-# Ver datos de una tabla
-psql -U postgres -d ayudas_humanitarias -c "SELECT * FROM users;"
+# Ver datos de beneficiarios
+psql -U postgres -d ayudas_humanitarias -c "SELECT * FROM censados;"
+
+# Ver datos de usuarios
+psql -U postgres -d ayudas_humanitarias -c "SELECT nombre, email, rol, municipio FROM usuarios;"
 
 # Salir (si estás dentro de psql)
 \q

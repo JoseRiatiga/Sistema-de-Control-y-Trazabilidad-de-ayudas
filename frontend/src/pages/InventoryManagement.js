@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './InventoryManagement.css';
 
@@ -11,11 +11,7 @@ function InventoryManagement() {
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
-  useEffect(() => {
-    fetchInventory();
-  }, [municipality]);
-
-  const fetchInventory = async () => {
+  const fetchInventory = useCallback(async () => {
     try {
       setLoading(true);
       let url = 'http://localhost:5000/api/inventory';
@@ -33,11 +29,15 @@ function InventoryManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [municipality, headers]);
+
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
 
   const calculateTotalValue = () => {
     return inventory.reduce((total, item) => {
-      const value = (item.quantity || 0) * (item.cost_per_unit || 0);
+      const value = (parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0);
       return total + value;
     }, 0);
   };
@@ -94,13 +94,13 @@ function InventoryManagement() {
                   <tbody>
                     {inventory.map(item => (
                       <tr key={item.id}>
-                        <td>{item.municipality}</td>
+                        <td>{item.municipio}</td>
                         <td>{item.aid_type_name}</td>
-                        <td>{item.quantity}</td>
-                        <td>{item.unit}</td>
-                        <td>${item.cost_per_unit?.toFixed(2) || '0.00'}</td>
-                        <td>${(item.quantity * item.cost_per_unit).toFixed(2)}</td>
-                        <td>{item.warehouse_location}</td>
+                        <td>{item.cantidad || 0}</td>
+                        <td>{item.unidad}</td>
+                        <td>${(parseFloat(item.costo_unitario) || 0).toFixed(2)}</td>
+                        <td>${((parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0)).toFixed(2)}</td>
+                        <td>{item.ubicacion_almacen}</td>
                       </tr>
                     ))}
                   </tbody>

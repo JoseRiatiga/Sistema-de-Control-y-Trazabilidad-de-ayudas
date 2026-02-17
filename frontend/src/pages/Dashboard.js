@@ -28,17 +28,19 @@ function Dashboard() {
         })
       ]);
 
-      const deliveries = deliveriesRes.data;
+      const deliveries = Array.isArray(deliveriesRes.data) ? deliveriesRes.data : [];
       const totalDeliveries = deliveries.length;
       const beneficiaries = new Set(deliveries.map(d => d.censado_id)).size;
 
+      const alerts = Array.isArray(alertsRes.data) ? alertsRes.data : [];
+      
       setStats({
         totalDeliveries,
         beneficiaries,
-        totalAlerts: alertsRes.data.length
+        totalAlerts: alerts.length
       });
 
-      setAlerts(alertsRes.data.slice(0, 5));
+      setAlerts(alerts.slice(0, 5));
     } catch (err) {
       setError('Error cargando datos del dashboard');
       console.error(err);
@@ -50,7 +52,7 @@ function Dashboard() {
   return (
     <div className="dashboard">
       <div className="container">
-        <h1>Bienvenido, {user?.name}</h1>
+        <h1>Bienvenido, {user?.nombre || user?.name}</h1>
 
         {error && <div className="alert alert-danger">{error}</div>}
 
@@ -88,10 +90,10 @@ function Dashboard() {
                   <tbody>
                     {alerts.map(alert => (
                       <tr key={alert.id}>
-                        <td>{alert.first_name} {alert.last_name}</td>
-                        <td>{alert.identification}</td>
-                        <td>{alert.aid_type_name}</td>
-                        <td>{new Date(alert.alert_date).toLocaleDateString()}</td>
+                        <td>{alert.primer_nombre} {alert.primer_apellido || ''}</td>
+                        <td>{alert.cedula || alert.identification}</td>
+                        <td>{alert.aid_type_name || alert.nombre}</td>
+                        <td>{new Date(alert.alert_date || alert.fecha_alerta).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -5,10 +5,10 @@ import './AidRegistration.css';
 function AidRegistration() {
   const [formData, setFormData] = useState({
     censado_id: '',
-    aid_type_id: '',
-    quantity: '',
-    municipality: '',
-    notes: ''
+    tipo_ayuda_id: '',
+    cantidad: '',
+    municipio: '',
+    notas: ''
   });
 
   const [censados, setCensados] = useState([]);
@@ -68,10 +68,10 @@ function AidRegistration() {
       // Limpiar formulario
       setFormData({
         censado_id: '',
-        aid_type_id: '',
-        quantity: '',
-        municipality: '',
-        notes: ''
+        tipo_ayuda_id: '',
+        cantidad: '',
+        municipio: '',
+        notas: ''
       });
 
       setTimeout(() => setMessage(''), 3000);
@@ -111,7 +111,7 @@ function AidRegistration() {
               <option value="">Seleccionar beneficiario</option>
               {censados.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.first_name} {c.last_name} ({c.identification})
+                  {c.primer_nombre} {c.primer_apellido} ({c.cedula})
                 </option>
               ))}
             </select>
@@ -120,28 +120,28 @@ function AidRegistration() {
           <div className="form-group">
             <label htmlFor="aid_type_id">Tipo de Ayuda</label>
             <select
-              id="aid_type_id"
-              name="aid_type_id"
-              value={formData.aid_type_id}
+              id="tipo_ayuda_id"
+              name="tipo_ayuda_id"
+              value={formData.tipo_ayuda_id}
               onChange={handleChange}
               required
             >
               <option value="">Seleccionar tipo de ayuda</option>
               {aidTypes.map(a => (
                 <option key={a.id} value={a.id}>
-                  {a.name} ({a.unit})
+                  {a.nombre} ({a.unidad})
                 </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor="quantity">Cantidad</label>
+            <label htmlFor="cantidad">Cantidad</label>
             <input
               type="number"
-              id="quantity"
-              name="quantity"
-              value={formData.quantity}
+              id="cantidad"
+              name="cantidad"
+              value={formData.cantidad}
               onChange={handleChange}
               required
               min="1"
@@ -149,23 +149,23 @@ function AidRegistration() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="municipality">Municipio</label>
+            <label htmlFor="municipio">Municipio</label>
             <input
               type="text"
-              id="municipality"
-              name="municipality"
-              value={formData.municipality}
+              id="municipio"
+              name="municipio"
+              value={formData.municipio}
               onChange={handleChange}
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="notes">Observaciones</label>
+            <label htmlFor="notas">Observaciones</label>
             <textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
+              id="notas"
+              name="notas"
+              value={formData.notas}
               onChange={handleChange}
               placeholder="Observaciones adicionales..."
             ></textarea>

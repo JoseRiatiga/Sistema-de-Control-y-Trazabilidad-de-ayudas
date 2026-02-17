@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(verifyToken, setCurrentUser);
 
 // Solo admins y auditores pueden generar reportes
-router.use(verifyRole(['admin', 'auditor']));
+router.use(verifyRole(['administrador', 'auditor']));
 
 // Reporte de entregas por municipio
 router.get('/deliveries', async (req, res) => {
@@ -17,33 +17,33 @@ router.get('/deliveries', async (req, res) => {
     
     let query = `
       SELECT
-        ad.municipality,
-        at.name as aid_type,
+        ea.municipio,
+        ta.nombre as aid_type,
         COUNT(*) as total_deliveries,
-        SUM(ad.quantity) as total_quantity,
-        COUNT(DISTINCT ad.censado_id) as beneficiaries
-      FROM aid_deliveries ad
-      JOIN aid_types at ON ad.aid_type_id = at.id
+        SUM(ea.cantidad) as total_quantity,
+        COUNT(DISTINCT ea.censado_id) as beneficiaries
+      FROM entregas_ayuda ea
+      JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       WHERE 1=1
     `;
     const values = [];
     
     if (municipality) {
-      query += ` AND ad.municipality = $${values.length + 1}`;
+      query += ` AND ea.municipio = $${values.length + 1}`;
       values.push(municipality);
     }
     
     if (dateFrom) {
-      query += ` AND ad.delivery_date >= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega >= $${values.length + 1}`;
       values.push(dateFrom);
     }
     
     if (dateTo) {
-      query += ` AND ad.delivery_date <= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega <= $${values.length + 1}`;
       values.push(dateTo);
     }
     
-    query += ' GROUP BY ad.municipality, at.name ORDER BY ad.municipality, at.name';
+    query += ' GROUP BY ea.municipio, ta.nombre ORDER BY ea.municipio, ta.nombre';
     
     const result = await global.db.query(query, values);
     res.json(result.rows);
@@ -60,23 +60,23 @@ router.get('/inventory', async (req, res) => {
     
     let query = `
       SELECT
-        i.municipality,
-        at.name as aid_type,
-        i.quantity,
-        i.cost_per_unit,
-        (i.quantity * i.cost_per_unit) as total_value
-      FROM inventory i
-      JOIN aid_types at ON i.aid_type_id = at.id
+        i.municipio,
+        ta.nombre as aid_type,
+        i.cantidad,
+        i.costo_unitario,
+        (i.cantidad * i.costo_unitario) as total_value
+      FROM inventario i
+      JOIN tipos_ayuda ta ON i.tipo_ayuda_id = ta.id
       WHERE 1=1
     `;
     const values = [];
     
     if (municipality) {
-      query += ` AND i.municipality = $${values.length + 1}`;
+      query += ` AND i.municipio = $${values.length + 1}`;
       values.push(municipality);
     }
     
-    query += ' ORDER BY i.municipality, at.name';
+    query += ' ORDER BY i.municipio, ta.nombre';
     
     const result = await global.db.query(query, values);
     res.json(result.rows);
@@ -93,22 +93,22 @@ router.get('/beneficiaries', async (req, res) => {
     
     let query = `
       SELECT
-        c.municipality,
+        c.municipio,
         COUNT(*) as total_beneficiaries,
-        SUM(c.family_members) as total_family_members,
+        SUM(c.miembros_familia) as total_family_members,
         COUNT(DISTINCT d.censado_id) as assisted_beneficiaries
       FROM censados c
-      LEFT JOIN aid_deliveries d ON c.id = d.censado_id
+      LEFT JOIN entregas_ayuda d ON c.id = d.censado_id
       WHERE 1=1
     `;
     const values = [];
     
     if (municipality) {
-      query += ` AND c.municipality = $${values.length + 1}`;
+      query += ` AND c.municipio = $${values.length + 1}`;
       values.push(municipality);
     }
     
-    query += ' GROUP BY c.municipality';
+    query += ' GROUP BY c.municipio';
     
     const result = await global.db.query(query, values);
     res.json(result.rows);
@@ -125,23 +125,23 @@ router.get('/duplicate-alerts', async (req, res) => {
     
     let query = `
       SELECT
-        c.municipality,
+        c.municipio,
         COUNT(*) as total_alerts,
-        COUNT(CASE WHEN da.alert_status = 'pending' THEN 1 END) as pending,
-        COUNT(CASE WHEN da.alert_status = 'reviewed' THEN 1 END) as reviewed,
-        COUNT(CASE WHEN da.alert_status = 'resolved' THEN 1 END) as resolved
-      FROM duplicate_alerts da
+        COUNT(CASE WHEN da.estado = 'pendiente' THEN 1 END) as pending,
+        COUNT(CASE WHEN da.estado = 'revisado' THEN 1 END) as reviewed,
+        COUNT(CASE WHEN da.estado = 'resuelto' THEN 1 END) as resolved
+      FROM alertas_duplicidad da
       JOIN censados c ON da.censado_id = c.id
       WHERE 1=1
     `;
     const values = [];
     
     if (municipality) {
-      query += ` AND c.municipality = $${values.length + 1}`;
+      query += ` AND c.municipio = $${values.length + 1}`;
       values.push(municipality);
     }
     
-    query += ' GROUP BY c.municipality';
+    query += ' GROUP BY c.municipio';
     
     const result = await global.db.query(query, values);
     res.json(result.rows);
@@ -158,50 +158,50 @@ router.get('/control-entities', async (req, res) => {
     
     let query = `
       SELECT
-        ad.municipality,
-        COUNT(DISTINCT ad.censado_id) as total_beneficiaries,
+        ea.municipio,
+        COUNT(DISTINCT ea.censado_id) as total_beneficiaries,
         COUNT(*) as total_deliveries,
-        SUM(ad.quantity) as total_items,
-        u.name as operator_name,
-        COUNT(CASE WHEN da.alert_status IS NOT NULL THEN 1 END) as alerts_generated,
-        ad.delivery_date::DATE as delivery_date
-      FROM aid_deliveries ad
-      JOIN users u ON ad.operator_id = u.id
-      LEFT JOIN duplicate_alerts da ON ad.censado_id = da.censado_id
+        SUM(ea.cantidad) as total_items,
+        u.nombre as operator_name,
+        COUNT(CASE WHEN da.id IS NOT NULL THEN 1 END) as alerts_generated,
+        ea.fecha_entrega::DATE as delivery_date
+      FROM entregas_ayuda ea
+      JOIN usuarios u ON ea.operador_id = u.id
+      LEFT JOIN alertas_duplicidad da ON ea.censado_id = da.censado_id
       WHERE 1=1
     `;
     const values = [];
     
     if (municipality) {
-      query += ` AND ad.municipality = $${values.length + 1}`;
+      query += ` AND ea.municipio = $${values.length + 1}`;
       values.push(municipality);
     }
     
     if (dateFrom) {
-      query += ` AND ad.delivery_date >= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega >= $${values.length + 1}`;
       values.push(dateFrom);
     }
     
     if (dateTo) {
-      query += ` AND ad.delivery_date <= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega <= $${values.length + 1}`;
       values.push(dateTo);
     }
     
-    query += ' GROUP BY ad.municipality, u.name, ad.delivery_date::DATE ORDER BY ad.delivery_date DESC';
+    query += ' GROUP BY ea.municipio, u.nombre, ea.fecha_entrega::DATE ORDER BY ea.fecha_entrega DESC';
     
     const result = await global.db.query(query, values);
     
     // Generar y guardar reporte
     const reportId = uuidv4();
     const reportQuery = `
-      INSERT INTO reports (id, title, report_type, municipality, date_from, date_to, generated_by, data)
+      INSERT INTO reportes (id, titulo, tipo_reporte, municipio, fecha_desde, fecha_hasta, generado_por, datos)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
     
     await global.db.query(reportQuery, [
       reportId,
       `Reporte para Entes de Control - ${municipality || 'Nacional'}`,
-      'audit',
+      'auditoria',
       municipality,
       dateFrom,
       dateTo,

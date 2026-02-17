@@ -5,11 +5,11 @@ class User {
   static async create(userData) {
     const id = uuidv4();
     const query = `
-      INSERT INTO users (id, name, email, password_hash, role, phone, municipality)
+      INSERT INTO usuarios (id, nombre, email, contraseña_hash, rol, telefono, municipio)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, name, email, role, phone, municipality, created_at
+      RETURNING id, nombre, email, rol, telefono, municipio, creado_en
     `;
-    const values = [id, userData.name, userData.email, userData.password_hash, userData.role, userData.phone, userData.municipality];
+    const values = [id, userData.nombre, userData.email, userData.contraseña_hash, userData.rol, userData.telefono, userData.municipio];
     
     try {
       const result = await global.db.query(query, values);
@@ -20,32 +20,32 @@ class User {
   }
 
   static async findByEmail(email) {
-    const query = 'SELECT * FROM users WHERE email = $1 AND active = true';
+    const query = 'SELECT * FROM usuarios WHERE email = $1 AND activo = true';
     const result = await global.db.query(query, [email]);
     return result.rows[0];
   }
 
   static async findById(id) {
-    const query = 'SELECT id, name, email, role, phone, municipality FROM users WHERE id = $1 AND active = true';
+    const query = 'SELECT id, nombre, email, rol, telefono, municipio FROM usuarios WHERE id = $1 AND activo = true';
     const result = await global.db.query(query, [id]);
     return result.rows[0];
   }
 
   static async getAll(filters = {}) {
-    let query = 'SELECT id, name, email, role, phone, municipality, created_at FROM users WHERE active = true';
+    let query = 'SELECT id, nombre, email, rol, telefono, municipio, creado_en FROM usuarios WHERE activo = true';
     const values = [];
     
-    if (filters.role) {
-      query += ` AND role = $${values.length + 1}`;
-      values.push(filters.role);
+    if (filters.rol) {
+      query += ` AND rol = $${values.length + 1}`;
+      values.push(filters.rol);
     }
     
-    if (filters.municipality) {
-      query += ` AND municipality = $${values.length + 1}`;
-      values.push(filters.municipality);
+    if (filters.municipio) {
+      query += ` AND municipio = $${values.length + 1}`;
+      values.push(filters.municipio);
     }
     
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY creado_en DESC';
     const result = await global.db.query(query, values);
     return result.rows;
   }
@@ -56,22 +56,22 @@ class Censado {
   static async create(censoData) {
     const id = uuidv4();
     const query = `
-      INSERT INTO censados (id, identification, first_name, last_name, phone, email, address, municipality, latitude, longitude, family_members)
+      INSERT INTO censados (id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, latitud, longitud, miembros_familia)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      RETURNING id, identification, first_name, last_name, phone, email, address, municipality, family_members
+      RETURNING id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, miembros_familia
     `;
     const values = [
       id,
-      censoData.identification,
-      censoData.first_name,
-      censoData.last_name,
-      censoData.phone,
+      censoData.cedula,
+      censoData.primer_nombre,
+      censoData.primer_apellido,
+      censoData.telefono,
       censoData.email,
-      censoData.address,
-      censoData.municipality,
-      censoData.latitude,
-      censoData.longitude,
-      censoData.family_members || 1
+      censoData.direccion,
+      censoData.municipio,
+      censoData.latitud,
+      censoData.longitud,
+      censoData.miembros_familia || 1
     ];
     
     try {
@@ -88,20 +88,20 @@ class Censado {
     return result.rows[0];
   }
 
-  static async findByIdentification(identification) {
-    const query = 'SELECT * FROM censados WHERE identification = $1';
-    const result = await global.db.query(query, [identification]);
+  static async findByCedula(cedula) {
+    const query = 'SELECT * FROM censados WHERE cedula = $1';
+    const result = await global.db.query(query, [cedula]);
     return result.rows[0];
   }
 
-  static async getByMunicipality(municipality) {
-    const query = 'SELECT * FROM censados WHERE municipality = $1 ORDER BY first_name, last_name';
-    const result = await global.db.query(query, [municipality]);
+  static async getByMunicipality(municipio) {
+    const query = 'SELECT * FROM censados WHERE municipio = $1 ORDER BY primer_nombre, primer_apellido';
+    const result = await global.db.query(query, [municipio]);
     return result.rows;
   }
 
   static async getAll(limit = 100, offset = 0) {
-    const query = 'SELECT * FROM censados ORDER BY municipality, first_name LIMIT $1 OFFSET $2';
+    const query = 'SELECT * FROM censados ORDER BY municipio, primer_nombre LIMIT $1 OFFSET $2';
     const result = await global.db.query(query, [limit, offset]);
     return result.rows;
   }
@@ -112,24 +112,24 @@ class AidType {
   static async create(aidTypeData) {
     const id = uuidv4();
     const query = `
-      INSERT INTO aid_types (id, name, description, unit)
+      INSERT INTO tipos_ayuda (id, nombre, descripcion, unidad)
       VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
-    const values = [id, aidTypeData.name, aidTypeData.description, aidTypeData.unit];
+    const values = [id, aidTypeData.nombre, aidTypeData.descripcion, aidTypeData.unidad];
     
     const result = await global.db.query(query, values);
     return result.rows[0];
   }
 
   static async getAll() {
-    const query = 'SELECT * FROM aid_types ORDER BY name';
+    const query = 'SELECT * FROM tipos_ayuda ORDER BY nombre';
     const result = await global.db.query(query);
     return result.rows;
   }
 
   static async findById(id) {
-    const query = 'SELECT * FROM aid_types WHERE id = $1';
+    const query = 'SELECT * FROM tipos_ayuda WHERE id = $1';
     const result = await global.db.query(query, [id]);
     return result.rows[0];
   }
@@ -142,18 +142,18 @@ class AidDelivery {
     const receiptNumber = `REC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     const query = `
-      INSERT INTO aid_deliveries (id, censado_id, aid_type_id, quantity, operator_id, municipality, notes, receipt_number)
+      INSERT INTO entregas_ayuda (id, censado_id, tipo_ayuda_id, cantidad, operador_id, municipio, notas, numero_comprobante)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
     const values = [
       id,
       deliveryData.censado_id,
-      deliveryData.aid_type_id,
-      deliveryData.quantity,
-      deliveryData.operator_id,
-      deliveryData.municipality,
-      deliveryData.notes,
+      deliveryData.tipo_ayuda_id,
+      deliveryData.cantidad,
+      deliveryData.operador_id,
+      deliveryData.municipio,
+      deliveryData.notas,
       receiptNumber
     ];
     
@@ -167,50 +167,50 @@ class AidDelivery {
 
   static async getByBeneficiary(censado_id) {
     const query = `
-      SELECT ad.*, at.name as aid_type_name, c.first_name, c.last_name
-      FROM aid_deliveries ad
-      JOIN aid_types at ON ad.aid_type_id = at.id
-      JOIN censados c ON ad.censado_id = c.id
-      WHERE ad.censado_id = $1
-      ORDER BY ad.delivery_date DESC
+      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido
+      FROM entregas_ayuda ea
+      JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
+      JOIN censados c ON ea.censado_id = c.id
+      WHERE ea.censado_id = $1
+      ORDER BY ea.fecha_entrega DESC
     `;
     const result = await global.db.query(query, [censado_id]);
     return result.rows;
   }
 
-  static async getByMunicipality(municipality, dateFrom = null, dateTo = null) {
+  static async getByMunicipality(municipio, dateFrom = null, dateTo = null) {
     let query = `
-      SELECT ad.*, at.name as aid_type_name, c.first_name, c.last_name, u.name as operator_name
-      FROM aid_deliveries ad
-      JOIN aid_types at ON ad.aid_type_id = at.id
-      JOIN censados c ON ad.censado_id = c.id
-      JOIN users u ON ad.operator_id = u.id
-      WHERE ad.municipality = $1
+      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido, u.nombre as operator_name
+      FROM entregas_ayuda ea
+      JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
+      JOIN censados c ON ea.censado_id = c.id
+      JOIN usuarios u ON ea.operador_id = u.id
+      WHERE ea.municipio = $1
     `;
-    const values = [municipality];
+    const values = [municipio];
     
     if (dateFrom) {
-      query += ` AND ad.delivery_date >= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega >= $${values.length + 1}`;
       values.push(dateFrom);
     }
     
     if (dateTo) {
-      query += ` AND ad.delivery_date <= $${values.length + 1}`;
+      query += ` AND ea.fecha_entrega <= $${values.length + 1}`;
       values.push(dateTo);
     }
     
-    query += ' ORDER BY ad.delivery_date DESC';
+    query += ' ORDER BY ea.fecha_entrega DESC';
     const result = await global.db.query(query, values);
     return result.rows;
   }
 
   static async getAll(limit = 100, offset = 0) {
     const query = `
-      SELECT ad.*, at.name as aid_type_name, c.first_name, c.last_name
-      FROM aid_deliveries ad
-      JOIN aid_types at ON ad.aid_type_id = at.id
-      JOIN censados c ON ad.censado_id = c.id
-      ORDER BY ad.delivery_date DESC
+      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido
+      FROM entregas_ayuda ea
+      JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
+      JOIN censados c ON ea.censado_id = c.id
+      ORDER BY ea.fecha_entrega DESC
       LIMIT $1 OFFSET $2
     `;
     const result = await global.db.query(query, [limit, offset]);
@@ -223,52 +223,52 @@ class Inventory {
   static async create(inventoryData) {
     const id = uuidv4();
     const query = `
-      INSERT INTO inventory (id, aid_type_id, quantity, cost_per_unit, municipality, warehouse_location)
+      INSERT INTO inventario (id, tipo_ayuda_id, cantidad, costo_unitario, municipio, ubicacion_almacen)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
     const values = [
       id,
-      inventoryData.aid_type_id,
-      inventoryData.quantity,
-      inventoryData.cost_per_unit,
-      inventoryData.municipality,
-      inventoryData.warehouse_location
+      inventoryData.tipo_ayuda_id,
+      inventoryData.cantidad,
+      inventoryData.costo_unitario,
+      inventoryData.municipio,
+      inventoryData.ubicacion_almacen
     ];
     
     const result = await global.db.query(query, values);
     return result.rows[0];
   }
 
-  static async updateQuantity(inventoryId, quantity) {
+  static async updateQuantity(inventoryId, cantidad) {
     const query = `
-      UPDATE inventory
-      SET quantity = $2, updated_at = CURRENT_TIMESTAMP
+      UPDATE inventario
+      SET cantidad = $2, actualizado_en = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
     `;
-    const result = await global.db.query(query, [inventoryId, quantity]);
+    const result = await global.db.query(query, [inventoryId, cantidad]);
     return result.rows[0];
   }
 
-  static async getByMunicipality(municipality) {
+  static async getByMunicipality(municipio) {
     const query = `
-      SELECT i.*, at.name as aid_type_name, at.unit
-      FROM inventory i
-      JOIN aid_types at ON i.aid_type_id = at.id
-      WHERE i.municipality = $1
-      ORDER BY at.name
+      SELECT i.*, ta.nombre as aid_type_name, ta.unidad
+      FROM inventario i
+      JOIN tipos_ayuda ta ON i.tipo_ayuda_id = ta.id
+      WHERE i.municipio = $1
+      ORDER BY ta.nombre
     `;
-    const result = await global.db.query(query, [municipality]);
+    const result = await global.db.query(query, [municipio]);
     return result.rows;
   }
 
   static async getAll() {
     const query = `
-      SELECT i.*, at.name as aid_type_name, at.unit
-      FROM inventory i
-      JOIN aid_types at ON i.aid_type_id = at.id
-      ORDER BY i.municipality, at.name
+      SELECT i.*, ta.nombre as aid_type_name, ta.unidad
+      FROM inventario i
+      JOIN tipos_ayuda ta ON i.tipo_ayuda_id = ta.id
+      ORDER BY i.municipio, ta.nombre
     `;
     const result = await global.db.query(query);
     return result.rows;

@@ -8,13 +8,13 @@ const router = express.Router();
 router.use(verifyToken, setCurrentUser);
 
 // Crear inventario (solo admin)
-router.post('/', verifyRole(['admin']), InventoryController.create);
+router.post('/', verifyRole(['administrador']), InventoryController.create);
 
 // Obtener inventarios
-router.get('/', InventoryController.getAll);
 router.get('/municipality/:municipality', InventoryController.getByMunicipality);
+router.get('/', InventoryController.getAll);
 
 // Actualizar cantidad (solo admin)
-router.patch('/:id', verifyRole(['admin']), InventoryController.updateQuantity);
+router.patch('/:id', verifyRole(['administrador']), InventoryController.updateQuantity);
 
 module.exports = router;

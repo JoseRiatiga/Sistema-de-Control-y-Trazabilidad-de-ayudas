@@ -6,17 +6,17 @@ const { User } = require('../models');
 class AuthController {
   static async register(req, res) {
     try {
-      const { name, email, password, role, phone, municipality } = req.body;
+      const { nombre, email, password, rol, telefono, municipio } = req.body;
       
       // Validar campos requeridos
-      if (!name || !email || !password || !role) {
-        return res.status(400).json({ error: 'Campos requeridos: name, email, password, role' });
+      if (!nombre || !email || !password || !rol) {
+        return res.status(400).json({ error: 'Campos requeridos: nombre, email, password, rol' });
       }
       
       // Validar que el rol sea válido
-      const validRoles = ['admin', 'operador', 'auditor'];
-      if (!validRoles.includes(role)) {
-        return res.status(400).json({ error: 'Rol inválido. Debe ser: admin, operador, auditor' });
+      const validRoles = ['administrador', 'operador', 'auditor'];
+      if (!validRoles.includes(rol)) {
+        return res.status(400).json({ error: 'Rol inválido. Debe ser: administrador, operador, auditor' });
       }
       
       // Verificar si el usuario ya existe
@@ -25,17 +25,14 @@ class AuthController {
         return res.status(400).json({ error: 'El email ya está registrado' });
       }
       
-      // Hash de la contraseña
-      const passwordHash = await bcrypt.hash(password, 10);
-      
-      // Crear usuario
+      // Crear usuario (sin hashear contraseña para proyecto universitario)
       const user = await User.create({
-        name,
+        nombre,
         email,
-        password_hash: passwordHash,
-        role,
-        phone,
-        municipality
+        contraseña_hash: password,
+        rol,
+        telefono,
+        municipio
       });
       
       return res.status(201).json({
@@ -62,15 +59,15 @@ class AuthController {
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
       }
       
-      // Verificar contraseña
-      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+      // Verificar contraseña (sin hashear para proyecto universitario)
+      const passwordMatch = (password === user.contraseña_hash);
       if (!passwordMatch) {
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
       }
       
       // Generar JWT
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role },
+        { id: user.id, email: user.email, rol: user.rol },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRATION || '7d' }
       );
@@ -80,10 +77,10 @@ class AuthController {
         token,
         user: {
           id: user.id,
-          name: user.name,
+          nombre: user.nombre,
           email: user.email,
-          role: user.role,
-          municipality: user.municipality
+          rol: user.rol,
+          municipio: user.municipio
         }
       });
     } catch (error) {
@@ -170,8 +167,8 @@ class CensoController {
   static async searchByIdentification(req, res) {
     try {
       const { Censado } = require('../models');
-      const { identification } = req.params;
-      const censado = await Censado.findByIdentification(identification);
+      const { cedula } = req.params;
+      const censado = await Censado.findByCedula(cedula);
       
       if (!censado) {
         return res.status(404).json({ error: 'Beneficiario no encontrado' });
@@ -219,13 +216,13 @@ class AidDeliveryController {
       
       const deliveryData = {
         ...req.body,
-        operator_id: req.userId
+        operador_id: req.userId
       };
       
       const delivery = await AidDelivery.create(deliveryData);
       
       // Registrar en auditoría
-      await auditLog('CREATE', 'aid_deliveries', delivery.id, null, delivery);
+      await auditLog('CREAR', 'entregas_ayuda', delivery.id, null, delivery);
       
       return res.status(201).json({
         message: 'Ayuda entregada exitosamente',

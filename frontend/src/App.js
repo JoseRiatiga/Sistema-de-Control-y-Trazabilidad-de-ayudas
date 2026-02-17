@@ -58,19 +58,19 @@ function App() {
           />
           <Route
             path="/aid-registration"
-            element={isAuthenticated && (user.role === 'operador' || user.role === 'admin') ? <AidRegistration /> : <Navigate to="/dashboard" />}
+            element={isAuthenticated && (user.rol === 'operador' || user.rol === 'administrador') ? <AidRegistration /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/inventory"
-            element={isAuthenticated && (user.role === 'admin' || user.role === 'operador') ? <InventoryManagement /> : <Navigate to="/dashboard" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <InventoryManagement /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/reports"
-            element={isAuthenticated && (user.role === 'admin' || user.role === 'auditor') ? <Reports /> : <Navigate to="/dashboard" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <Reports /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/audit"
-            element={isAuthenticated && (user.role === 'admin' || user.role === 'auditor') ? <AuditTrail /> : <Navigate to="/dashboard" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <AuditTrail /> : <Navigate to="/dashboard" />}
           />
           <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} />} />
         </Routes>
