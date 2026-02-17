@@ -12,7 +12,8 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
-    req.userRole = decoded.role;
+    // Accept both 'role' (English) and 'rol' (Spanish) from JWT
+    req.userRole = decoded.role || decoded.rol;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token inválido' });

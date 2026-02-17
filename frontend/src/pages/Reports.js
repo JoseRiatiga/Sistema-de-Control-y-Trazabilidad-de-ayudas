@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './Reports.css';
 
 function Reports() {
@@ -13,6 +14,45 @@ function Reports() {
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
+
+  // Traducir nombres de columnas del inglés al español
+  const translateColumnName = (columnName) => {
+    const translations = {
+      'municipio': 'Municipio',
+      'aid_type': 'Tipo de Ayuda',
+      'nombre': 'Tipo de Ayuda',
+      'total_deliveries': 'Total de Entregas',
+      'total_quantity': 'Cantidad Total',
+      'cantidad_total': 'Cantidad Total',
+      'cantidad': 'Cantidad',
+      'costo_unitario': 'Costo Unitario',
+      'total_value': 'Valor Total',
+      'beneficiaries': 'Beneficiarios',
+      'assisted_beneficiaries': 'Beneficiarios Asistidos',
+      'total_beneficiaries': 'Total Beneficiarios',
+      'total_family_members': 'Total Miembros Familia',
+      'total_alerts': 'Total Alertas',
+      'pending': 'Pendientes',
+      'reviewed': 'Revisadas',
+      'resolved': 'Resueltas',
+      'operator_name': 'Nombre Operador',
+      'total_items': 'Total Items',
+      'alerts_generated': 'Alertas Generadas',
+      'delivery_date': 'Fecha Entrega',
+      'fecha_entrega': 'Fecha de Entrega',
+      'operador_id': 'ID Operador',
+      'censado_id': 'ID Beneficiario',
+      'tipo_ayuda_id': 'ID Tipo de Ayuda',
+      'id': 'ID',
+      'email': 'Email',
+      'creado_en': 'Creado En',
+      'actualizado_en': 'Actualizado En',
+      'estado': 'Estado',
+      'estado_alerta': 'Estado Alerta',
+      'notas': 'Notas'
+    };
+    return translations[columnName] || columnName.replace(/_/g, ' ').toUpperCase();
+  };
 
   const generateReport = async () => {
     try {
@@ -85,13 +125,16 @@ function Reports() {
 
           <div className="form-group">
             <label htmlFor="municipality">Municipio</label>
-            <input
-              type="text"
+            <select
               id="municipality"
               value={municipality}
               onChange={(e) => setMunicipality(e.target.value)}
-              placeholder="Dejar en blanco para todos"
-            />
+            >
+              <option value="">-- Seleccionar municipio --</option>
+              {COLOMBIAN_MUNICIPALITIES.map((mun) => (
+                <option key={mun} value={mun}>{mun}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
@@ -133,7 +176,7 @@ function Reports() {
             <thead>
               <tr>
                 {Object.keys(reportData[0]).map(key => (
-                  <th key={key}>{key}</th>
+                  <th key={key}>{translateColumnName(key)}</th>
                 ))}
               </tr>
             </thead>
@@ -147,6 +190,14 @@ function Reports() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && reportData.length === 0 && (
+        <div className="card">
+          <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+            No hay reporte para mostrar
+          </p>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './AidRegistration.css';
 
 function AidRegistration() {
@@ -150,14 +151,18 @@ function AidRegistration() {
 
           <div className="form-group">
             <label htmlFor="municipio">Municipio</label>
-            <input
-              type="text"
+            <select
               id="municipio"
               name="municipio"
               value={formData.municipio}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">-- Seleccionar municipio --</option>
+              {COLOMBIAN_MUNICIPALITIES.map((mun) => (
+                <option key={mun} value={mun}>{mun}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">

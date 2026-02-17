@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './AuditTrail.css';
 
 function AuditTrail() {
@@ -93,13 +94,16 @@ function AuditTrail() {
         {(activeTab === 'alerts' || activeTab === 'delivery-log') && (
           <div className="form-group">
             <label htmlFor="municipality">Filtrar por Municipio:</label>
-            <input
-              type="text"
+            <select
               id="municipality"
               value={municipality}
               onChange={(e) => setMunicipality(e.target.value)}
-              placeholder="Dejar en blanco para todos"
-            />
+            >
+              <option value="">-- Todos los municipios --</option>
+              {COLOMBIAN_MUNICIPALITIES.map((mun) => (
+                <option key={mun} value={mun}>{mun}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>

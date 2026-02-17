@@ -127,9 +127,9 @@ router.get('/duplicate-alerts', async (req, res) => {
       SELECT
         c.municipio,
         COUNT(*) as total_alerts,
-        COUNT(CASE WHEN da.estado = 'pendiente' THEN 1 END) as pending,
-        COUNT(CASE WHEN da.estado = 'revisado' THEN 1 END) as reviewed,
-        COUNT(CASE WHEN da.estado = 'resuelto' THEN 1 END) as resolved
+        COUNT(CASE WHEN da.estado_alerta = 'pendiente' THEN 1 END) as pending,
+        COUNT(CASE WHEN da.estado_alerta = 'revisada' THEN 1 END) as reviewed,
+        COUNT(CASE WHEN da.estado_alerta = 'resuelta' THEN 1 END) as resolved
       FROM alertas_duplicidad da
       JOIN censados c ON da.censado_id = c.id
       WHERE 1=1
@@ -159,15 +159,15 @@ router.get('/control-entities', async (req, res) => {
     let query = `
       SELECT
         ea.municipio,
-        COUNT(DISTINCT ea.censado_id) as total_beneficiaries,
+        ta.nombre as aid_type,
         COUNT(*) as total_deliveries,
         SUM(ea.cantidad) as total_items,
+        COUNT(DISTINCT ea.censado_id) as total_beneficiaries,
         u.nombre as operator_name,
-        COUNT(CASE WHEN da.id IS NOT NULL THEN 1 END) as alerts_generated,
         ea.fecha_entrega::DATE as delivery_date
       FROM entregas_ayuda ea
       JOIN usuarios u ON ea.operador_id = u.id
-      LEFT JOIN alertas_duplicidad da ON ea.censado_id = da.censado_id
+      JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       WHERE 1=1
     `;
     const values = [];
@@ -187,7 +187,7 @@ router.get('/control-entities', async (req, res) => {
       values.push(dateTo);
     }
     
-    query += ' GROUP BY ea.municipio, u.nombre, ea.fecha_entrega::DATE ORDER BY ea.fecha_entrega DESC';
+    query += ' GROUP BY ea.municipio, ta.nombre, u.nombre, ea.fecha_entrega::DATE ORDER BY ea.fecha_entrega DESC';
     
     const result = await global.db.query(query, values);
     
@@ -202,18 +202,14 @@ router.get('/control-entities', async (req, res) => {
       reportId,
       `Reporte para Entes de Control - ${municipality || 'Nacional'}`,
       'auditoria',
-      municipality,
-      dateFrom,
-      dateTo,
+      municipality || null,
+      dateFrom || null,
+      dateTo || null,
       req.userId,
       JSON.stringify(result.rows)
     ]);
     
-    res.json({
-      reportId,
-      data: result.rows,
-      generatedAt: new Date()
-    });
+    res.json(result.rows);
   } catch (error) {
     console.error('Control entities report error:', error);
     res.status(500).json({ error: error.message });
