@@ -1,0 +1,51 @@
+.audit-trail {
+  padding: 30px 0;
+}
+
+.audit-trail h1 {
+  font-size: 28px;
+  color: #2c3e50;
+  margin-bottom: 25px;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #bdc3c7;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #7f8c8d;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  color: #2c3e50;
+}
+
+.tab.active {
+  color: #3498db;
+  border-bottom-color: #3498db;
+}
+
+.badge-pending {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.badge-reviewed {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.badge-resolved {
+  background-color: #27ae60;
+  color: white;
+}

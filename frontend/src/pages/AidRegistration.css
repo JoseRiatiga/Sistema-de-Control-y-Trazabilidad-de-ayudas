@@ -1,0 +1,13 @@
+.aid-registration {
+  padding: 30px 0;
+}
+
+.aid-registration h1 {
+  font-size: 28px;
+  color: #2c3e50;
+  margin-bottom: 25px;
+}
+
+.aid-registration form {
+  max-width: 600px;
+}
