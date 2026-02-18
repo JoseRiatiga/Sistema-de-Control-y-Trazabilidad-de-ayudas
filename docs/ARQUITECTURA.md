@@ -181,12 +181,15 @@ App.js (Componente raíz)
 │   ├── Información de usuario
 │   └── Botón de logout
 ├── Routes
-│   ├── /login → Login
-│   ├── /dashboard → Dashboard
-│   ├── /aid-registration → AidRegistration
-│   ├── /inventory → InventoryManagement
-│   ├── /reports → Reports
-│   └── /audit → AuditTrail
+│   ├── /ingreso → Login
+│   ├── /panel → Dashboard
+│   ├── /registrar-ayuda → AidRegistration
+│   ├── /inventario → InventoryManagement
+│   ├── /beneficiarios → BeneficiaryManagement
+│   ├── /reportes → Reports
+│   ├── /auditorias → AuditTrail
+│   ├── /usuarios → UserManagement
+│   └── /api/... → Backend APIs
 └── Context
     └── AuthContext (Token y usuario)
 ```

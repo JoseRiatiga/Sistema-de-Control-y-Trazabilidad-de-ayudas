@@ -287,6 +287,7 @@ class AidDelivery {
     const query = `
       SELECT 
         ea.id,
+        ea.censado_id,
         ea.fecha_entrega,
         ea.cantidad as cantidad_entregada,
         ea.numero_comprobante,

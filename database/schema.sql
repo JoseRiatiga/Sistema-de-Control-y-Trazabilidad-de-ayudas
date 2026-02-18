@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS entregas_ayuda (
   municipio VARCHAR(100) NOT NULL,
   notas TEXT,
   numero_comprobante VARCHAR(50) UNIQUE,
+  inventario_deducido BOOLEAN DEFAULT true,
+  razon_no_deduccion VARCHAR(255),
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -25,7 +25,7 @@ function Dashboard() {
         axios.get('http://localhost:5000/api/aids/delivery', { headers }),
         axios.get('http://localhost:5000/api/audit/duplicate-alerts', { 
           headers,
-          params: { status: 'pending' }
+          params: { status: 'pendiente' }
         })
       ]);
 
@@ -100,6 +100,9 @@ function Dashboard() {
                     ))}
                   </tbody>
                 </table>
+                <p style={{ marginTop: '12px', fontSize: '13px', color: '#7f8c8d', textAlign: 'right' }}>
+                  Mostrando últimas 5 alertas. <a href="/auditorias" style={{ color: '#3498db', textDecoration: 'none', fontWeight: 'bold' }}>Ver todas en Auditoría →</a>
+                </p>
               </div>
             )}
 

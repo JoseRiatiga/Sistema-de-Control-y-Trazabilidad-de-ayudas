@@ -12,24 +12,24 @@ function NavBar({ onLogout }) {
         <h1>Sistema de Ayudas</h1>
       </div>
       <div className="navbar-links">
-        <Link to="/dashboard">Dashboard</Link>
+        <Link to="/panel">Panel Principal</Link>
         {(user.rol === 'operador' || user.rol === 'administrador') && (
-          <Link to="/aid-registration">Registrar Ayuda</Link>
+          <Link to="/registrar-ayuda">Registrar Ayuda</Link>
         )}
         {(user.rol === 'operador' || user.rol === 'administrador') && (
-          <Link to="/inventory">Inventario</Link>
+          <Link to="/inventario">Inventario</Link>
         )}
         {(user.rol === 'operador' || user.rol === 'administrador') && (
-          <Link to="/beneficiaries">Beneficiarios</Link>
+          <Link to="/beneficiarios">Beneficiarios</Link>
         )}
         {(user.rol === 'administrador' || user.rol === 'auditor') && (
-          <Link to="/reports">Reportes</Link>
+          <Link to="/reportes">Reportes</Link>
         )}
         {(user.rol === 'administrador' || user.rol === 'auditor') && (
-          <Link to="/audit">Auditoría</Link>
+          <Link to="/auditorias">Auditoría</Link>
         )}
         {user.rol === 'administrador' && (
-          <Link to="/users">Gestión de Usuarios</Link>
+          <Link to="/usuarios">Gestión de Usuarios</Link>
         )}
         <div className="user-info">
           <span>{user.nombre} ({user.rol})</span>

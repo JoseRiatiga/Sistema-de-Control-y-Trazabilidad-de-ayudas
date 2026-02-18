@@ -152,11 +152,12 @@ Get-Process | Where-Object {$_.Handles -like "*3000*"}
 3. ¡Listo!
 
 ### Rutas Principales:
-- Dashboard: http://localhost:3000/dashboard
-- Registrar Ayuda: http://localhost:3000/aid-registration
-- Inventario: http://localhost:3000/inventory
-- Reportes: http://localhost:3000/reports
-- Auditoría: http://localhost:3000/audit
+- Panel Principal: http://localhost:3000/panel
+- Registrar Ayuda: http://localhost:3000/registrar-ayuda
+- Inventario: http://localhost:3000/inventario
+- Beneficiarios: http://localhost:3000/beneficiarios
+- Reportes: http://localhost:3000/reportes
+- Auditoría: http://localhost:3000/auditorias
 
 ## API en Postman (Opcional)
 

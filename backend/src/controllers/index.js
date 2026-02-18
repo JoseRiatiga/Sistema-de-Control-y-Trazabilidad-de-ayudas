@@ -259,6 +259,7 @@ class AidDeliveryController {
       const { auditLog } = require('../middleware/auth');
       
       const { censado_id, tipo_ayuda_id, cantidad } = req.body;
+      const isDuplicate = !!res.locals.duplicateAlert;
 
       // 1. Obtener datos del beneficiario
       const beneficiary = await Censado.findById(censado_id);
@@ -269,7 +270,7 @@ class AidDeliveryController {
       // 2. Verificar disponibilidad en inventario del municipio específico
       const inventory = await Inventory.getByAidTypeAndMunicipality(tipo_ayuda_id, beneficiary.municipio);
       
-      if (!inventory) {
+      if (!inventory && !isDuplicate) {
         return res.status(400).json({ 
           error: `No hay inventario del producto en ${beneficiary.municipio}. Verifique la disponibilidad en ese municipio.`,
           disponible: 0,
@@ -277,7 +278,7 @@ class AidDeliveryController {
         });
       }
 
-      if (inventory.cantidad < cantidad) {
+      if (inventory && inventory.cantidad < cantidad && !isDuplicate) {
         return res.status(400).json({ 
           error: `Cantidad insuficiente. Disponible: ${inventory.cantidad}, Solicitado: ${cantidad} en ${beneficiary.municipio}`,
           disponible: inventory.cantidad,
@@ -295,26 +296,37 @@ class AidDeliveryController {
       
       const delivery = await AidDelivery.create(deliveryData);
 
-      // 4. Restar del inventario
-      const updatedInventory = await Inventory.decreaseQuantity(inventory.id, cantidad);
-      
-      if (!updatedInventory) {
-        // Si falla la actualización, eliminar la entrega creada
-        await AidDelivery.delete(delivery.id);
-        return res.status(500).json({ 
-          error: 'Error al actualizar inventario. Entrega cancelada.' 
-        });
+      // 4. Restar del inventario solo si NO es duplicado
+      let inventoryUpdated = null;
+      if (!isDuplicate && inventory) {
+        inventoryUpdated = await Inventory.decreaseQuantity(inventory.id, cantidad);
+        
+        if (!inventoryUpdated) {
+          // Si falla la actualización, eliminar la entrega creada
+          await AidDelivery.delete(delivery.id);
+          return res.status(500).json({ 
+            error: 'Error al actualizar inventario. Entrega cancelada.' 
+          });
+        }
       }
 
       // 5. Registrar en auditoría
       await auditLog('CREAR', 'entregas_ayuda', delivery.id, null, delivery);
       
+      console.log(`\n✓ Entrega registrada - Duplicado: ${isDuplicate} | Inventario deducido: ${!isDuplicate}`);
+      
       return res.status(201).json({
-        message: 'Ayuda entregada exitosamente',
+        message: isDuplicate 
+          ? 'Ayuda registrada pero NO descontada del inventario (Alerta de duplicidad)' 
+          : 'Ayuda entregada y descontada del inventario exitosamente',
         delivery,
-        inventoryUpdated: {
+        inventoryUpdated: inventoryUpdated ? {
           cantidadAnterior: inventory.cantidad,
-          cantidadNueva: updatedInventory.cantidad
+          cantidadNueva: inventoryUpdated.cantidad
+        } : {
+          cantidadAnterior: inventory?.cantidad || 0,
+          cantidadNueva: inventory?.cantidad || 0,
+          razon: 'No se desinventorió (Alerta de duplicidad)'
         },
         duplicateAlert: res.locals.duplicateAlert || null
       });

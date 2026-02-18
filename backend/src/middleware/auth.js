@@ -58,7 +58,12 @@ const auditLog = async (action, tableName, recordId, oldValues = null, newValues
 const checkDuplicateDelivery = async (req, res, next) => {
   const { censado_id, tipo_ayuda_id } = req.body;
   
+  console.log('🔍 [checkDuplicateDelivery] Verificando duplicados:');
+  console.log('   censado_id:', censado_id);
+  console.log('   tipo_ayuda_id:', tipo_ayuda_id);
+  
   if (!censado_id || !tipo_ayuda_id) {
+    console.log('   ⚠️ Falta censado_id o tipo_ayuda_id, saltando verificación');
     return next();
   }
   
@@ -71,34 +76,40 @@ const checkDuplicateDelivery = async (req, res, next) => {
     
     const result = await global.db.query(query, [censado_id, tipo_ayuda_id]);
     
+    console.log('   Entregas anteriores encontradas:', result.rows.length);
+    
     if (result.rows.length > 0) {
+      console.log('   ✓ DUPLICADO DETECTADO - Creando alerta');
       // Crear alerta de duplicidad
       const alertQuery = `
-        INSERT INTO alertas_duplicidad (id, censado_id, tipo_ayuda_id, ultima_entrega, dias_desde, estado_alerta)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO alertas_duplicidad (censado_id, tipo_ayuda_id, fecha_ultima_entrega, dias_desde_ultima_entrega, estado_alerta)
+        VALUES ($1, $2, $3, $4, $5)
       `;
       
       const daysSince = Math.floor((Date.now() - new Date(result.rows[0].fecha_entrega).getTime()) / (1000 * 60 * 60 * 24));
       
       await global.db.query(alertQuery, [
-        uuidv4(),
         censado_id,
         tipo_ayuda_id,
         result.rows[0].fecha_entrega,
         daysSince,
-        'pending'
+        'pendiente'
       ]);
+      
+      console.log('   ✓ Alerta creada correctamente');
       
       res.locals.duplicateAlert = {
         message: 'Alerta: Este beneficiario ya recibió esta ayuda recientemente',
         lastDelivery: result.rows[0].fecha_entrega,
         daysSince: daysSince
       };
+    } else {
+      console.log('   ✓ No hay entregas previas - Primera vez');
     }
     
     next();
   } catch (error) {
-    console.error('Error checking duplicate delivery:', error);
+    console.error('❌ Error checking duplicate delivery:', error.message);
     next();
   }
 };
