@@ -78,6 +78,7 @@
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: white;
 }
 
 /* Dropdown Menu */
@@ -331,4 +332,8 @@
 
 [data-theme="dark"] .theme-toggle:hover .theme-label {
   color: #f1f5f9;
+}
+
+[data-theme="dark"] .user-name {
+  color: white;
 }
