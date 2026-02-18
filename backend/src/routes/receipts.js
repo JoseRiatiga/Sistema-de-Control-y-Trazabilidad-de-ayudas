@@ -14,9 +14,23 @@ router.use(verifyToken, setCurrentUser);
 router.post('/:deliveryId', async (req, res) => {
   try {
     const { deliveryId } = req.params;
-    const { signedByBeneficiary } = req.body;
+    const { signedByBeneficiary, relatedDeliveries } = req.body;
     
-    console.log('\n📄 Generando comprobante para entrega:', deliveryId);
+    console.log('\n📄 Generando comprobante para entrega(s)');
+    console.log('  Param deliveryId:', deliveryId);
+    console.log('  Body relatedDeliveries:', relatedDeliveries);
+    console.log('  signedByBeneficiary:', signedByBeneficiary);
+    
+    // Obtener todas las entregas (la principal + las relacionadas)
+    let deliveryIds = relatedDeliveries && Array.isArray(relatedDeliveries) && relatedDeliveries.length > 0 
+      ? relatedDeliveries 
+      : [deliveryId];
+    
+    console.log('  IDs finales a consultar:', deliveryIds);
+    
+    // Construir placeholders dinámicamente para IN clause
+    const placeholders = deliveryIds.map((_, i) => `$${i + 1}`).join(', ');
+    
     const deliveryQuery = `
       SELECT ea.*, c.primer_nombre, c.primer_apellido, c.cedula, c.direccion, c.municipio,
              ta.nombre as aid_type_name, ta.unidad, u.nombre as operator_name
@@ -24,25 +38,35 @@ router.post('/:deliveryId', async (req, res) => {
       JOIN censados c ON ea.censado_id = c.id
       JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       JOIN usuarios u ON ea.operador_id = u.id
-      WHERE ea.id = $1
+      WHERE ea.id IN (${placeholders})
+      ORDER BY ea.fecha_entrega ASC
     `;
     
-    const deliveryResult = await global.db.query(deliveryQuery, [deliveryId]);
+    console.log('  Query:', deliveryQuery);
+    console.log('  Params:', deliveryIds);
+    
+    const deliveryResult = await global.db.query(deliveryQuery, deliveryIds);
+    
+    console.log('  Resultados encontrados:', deliveryResult.rows.length);
+    
     if (deliveryResult.rows.length === 0) {
       return res.status(404).json({ error: 'Entrega no encontrada' });
     }
     
-    const delivery = deliveryResult.rows[0];
+    const deliveries = deliveryResult.rows;
+    const mainDelivery = deliveries[0];
+    
+    console.log('  Entregas a incluir en comprobante:', deliveries.length);
     
     // Crear comprobante en la base de datos
     const receiptId = uuidv4();
     const receiptHash = require('crypto')
       .createHash('sha256')
-      .update(JSON.stringify(delivery) + Date.now())
+      .update(JSON.stringify(deliveries) + Date.now())
       .digest('hex');
     
-    // Usar el campo numero_comprobante que ya existe en entregas_ayuda
-    const receiptNumber = delivery.numero_comprobante;
+    // Usar el número de comprobante de la primera entrega
+    const receiptNumber = mainDelivery.numero_comprobante;
     
     const receiptQuery = `
       INSERT INTO comprobantes_entrega (id, entrega_id, numero_comprobante, hash_comprobante, firmado_por, firma_beneficiario)
@@ -61,8 +85,8 @@ router.post('/:deliveryId', async (req, res) => {
     
     const receipt = receiptResult.rows[0];
     
-    // Generar PDF
-    const pdfBuffer = await generateReceiptPDF(delivery, receipt);
+    // Generar PDF con TODAS las entregas
+    const pdfBuffer = await generateReceiptPDF(deliveries, receipt);
     
     // Guardar PDF
     const receiptDir = require('path').join(__dirname, '../../receipts');
@@ -154,7 +178,7 @@ router.get('/download/delivery/:deliveryId', async (req, res) => {
 });
 
 // Función para generar PDF del comprobante
-function generateReceiptPDF(delivery, receipt) {
+function generateReceiptPDF(deliveries, receipt) {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument();
@@ -165,6 +189,8 @@ function generateReceiptPDF(delivery, receipt) {
       doc.on('end', () => {
         resolve(Buffer.concat(buffers));
       });
+      
+      const mainDelivery = deliveries[0];
       
       // Encabezado
       doc.fontSize(20).text('COMPROBANTE DE ENTREGA', 100, 50);
@@ -181,43 +207,81 @@ function generateReceiptPDF(delivery, receipt) {
       
       // Datos del beneficiario
       doc.fontSize(12).font('Helvetica-Bold').text('BENEFICIARIO', 70, 230);
-      doc.fontSize(11).font('Helvetica').text(`Nombre: ${delivery.primer_nombre} ${delivery.primer_apellido}`, 70, 250);
-      doc.text(`Cédula: ${delivery.cedula}`, 70, 270);
-      doc.text(`Dirección: ${delivery.direccion || 'N/A'}`, 70, 290);
-      doc.text(`Municipio: ${delivery.municipio}`, 70, 310);
+      doc.fontSize(11).font('Helvetica').text(`Nombre: ${mainDelivery.primer_nombre} ${mainDelivery.primer_apellido}`, 70, 250);
+      doc.text(`Cédula: ${mainDelivery.cedula}`, 70, 270);
+      doc.text(`Dirección: ${mainDelivery.direccion || 'N/A'}`, 70, 290);
+      doc.text(`Municipio: ${mainDelivery.municipio}`, 70, 310);
       
       doc.moveTo(50, 330).lineTo(550, 330).stroke();
       
-      // Datos de la entrega
-      doc.fontSize(12).font('Helvetica-Bold').text('DESCRIPCIÓN DE LA AYUDA', 70, 350);
-      doc.fontSize(11).font('Helvetica')
-        .text(`Tipo de Ayuda: ${delivery.aid_type_name}`, 70, 370)
-        .text(`Cantidad: ${delivery.cantidad} ${delivery.unidad}`, 70, 390)
-        .text(`Fecha de Entrega: ${new Date(delivery.fecha_entrega).toLocaleDateString('es-ES')}`, 70, 410)
-        .text(`Operador: ${delivery.operator_name}`, 70, 430);
+      // Tabla de entregas
+      doc.fontSize(12).font('Helvetica-Bold').text('DESCRIPCIÓN DE LAS AYUDAS', 70, 350);
       
-      if (delivery.notas) {
-        doc.text(`Observaciones: ${delivery.notas}`, 70, 450);
-      }
+      let yPosition = 380;
       
-      doc.moveTo(50, 480).lineTo(550, 480).stroke();
+      // Encabezados de tabla
+      doc.fontSize(9).font('Helvetica-Bold')
+        .text('Tipo de Ayuda', 70, yPosition)
+        .text('Cantidad', 250, yPosition)
+        .text('Fecha', 350, yPosition)
+        .text('Obs.', 450, yPosition);
+      
+      doc.moveTo(50, yPosition + 15).lineTo(550, yPosition + 15).stroke();
+      
+      yPosition += 25;
+      
+      // Filas de la tabla
+      doc.fontSize(9).font('Helvetica');
+      
+      deliveries.forEach((delivery, index) => {
+        const truncatedNotes = delivery.notas ? delivery.notas.substring(0, 20) : '-';
+        
+        doc.text(delivery.aid_type_name.substring(0, 20), 70, yPosition)
+          .text(`${delivery.cantidad} ${delivery.unidad}`, 250, yPosition)
+          .text(new Date(delivery.fecha_entrega).toLocaleDateString('es-ES'), 350, yPosition)
+          .text(truncatedNotes, 450, yPosition);
+        
+        yPosition += 20;
+        
+        // Separador cada 5 filas
+        if ((index + 1) % 5 === 0 && index < deliveries.length - 1) {
+          doc.moveTo(50, yPosition).lineTo(550, yPosition).stroke();
+          yPosition += 10;
+        }
+      });
+      
+      doc.moveTo(50, yPosition).lineTo(550, yPosition).stroke();
+      
+      yPosition += 20;
+      
+      // Resumen
+      const totalAmount = deliveries.length;
+      doc.fontSize(11).font('Helvetica-Bold')
+        .text(`Total de ítems entregados: ${totalAmount}`, 70, yPosition);
+      
+      yPosition = Math.min(yPosition + 40, 520);
+      
+      doc.moveTo(50, yPosition).lineTo(550, yPosition).stroke();
       
       // Firmas
-      doc.fontSize(11)
-        .text('Firma del Operador', 100, 520)
-        .text('_________________________', 100, 540)
-        .text(`${delivery.operator_name}`, 100, 555);
+      doc.fontSize(11).font('Helvetica-Bold')
+        .text('Firma del Operador', 100, yPosition + 20)
+        .text('_________________________', 100, yPosition + 40)
+        .font('Helvetica')
+        .text(`${mainDelivery.operator_name}`, 100, yPosition + 55);
       
       if (receipt.firma_beneficiario) {
-        doc.text('Firma del Beneficiario', 350, 520)
-          .text('_________________________', 350, 540)
-          .text(`${delivery.primer_nombre} ${delivery.primer_apellido}`, 350, 555);
+        doc.font('Helvetica-Bold')
+          .text('Firma del Beneficiario', 350, yPosition + 20)
+          .text('_________________________', 350, yPosition + 40)
+          .font('Helvetica')
+          .text(`${mainDelivery.primer_nombre} ${mainDelivery.primer_apellido}`, 350, yPosition + 55);
       }
       
-      doc.moveTo(50, 600).lineTo(550, 600).stroke();
-      doc.fontSize(10).text(
+      doc.moveTo(50, yPosition + 85).lineTo(550, yPosition + 85).stroke();
+      doc.fontSize(8).text(
         'Este documento es válido como comprobante de entrega. Hash para verificación: ' + receipt.hash_comprobante,
-        70, 620, { width: 450 }
+        70, yPosition + 100, { width: 450 }
       );
       
       doc.end();
