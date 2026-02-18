@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
+import AlertEditModal from './AlertEditModal';
 import './AuditTrail.css';
 
 function AuditTrail() {
@@ -9,7 +10,11 @@ function AuditTrail() {
   const [activeTab, setActiveTab] = useState('alerts');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [municipality, setMunicipality] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [modalAction, setModalAction] = useState(null);
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -50,21 +55,47 @@ function AuditTrail() {
     }
   };
 
-  const updateAlertStatus = async (alertId, newStatus) => {
+  const openModal = (alert, action) => {
+    setSelectedAlert(alert);
+    setModalAction(action);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedAlert(null);
+    setModalAction(null);
+  };
+
+  const updateAlertStatus = async (razon, notas) => {
     try {
-      await axios.patch(
-        `http://localhost:5000/api/audit/duplicate-alerts/${alertId}`,
-        { status: newStatus },
+      const response = await axios.patch(
+        `http://localhost:5000/api/audit/duplicate-alerts/${selectedAlert.id}`,
+        { 
+          status: modalAction, 
+          razon: razon,
+          notas: notas 
+        },
         { headers }
       );
-      // Actualizar localmente sin recargar desde servidor
+      
+      // Actualizar localmente
       setAlertData(prevData =>
         prevData.map(alert =>
-          alert.id === alertId ? { ...alert, estado_alerta: newStatus } : alert
+          alert.id === selectedAlert.id 
+            ? { ...alert, estado_alerta: response.data.alert.estado_alerta, razon_resolucion: razon, notas: notas } 
+            : alert
         )
       );
+      
+      // Mostrar mensaje de éxito
+      setSuccessMessage(response.data.message);
+      setTimeout(() => setSuccessMessage(''), 5000);
+      
+      closeModal();
     } catch (err) {
       console.error('Error updating alert:', err);
+      setError(err.response?.data?.error || 'Error al actualizar la alerta');
     }
   };
 
@@ -73,6 +104,7 @@ function AuditTrail() {
       <h1>Sistema de Auditoría</h1>
 
       {error && <div className="alert alert-danger">{error}</div>}
+      {successMessage && <div className="alert alert-success">{successMessage}</div>}
 
       <div className="card">
         <div className="tabs">
@@ -155,17 +187,25 @@ function AuditTrail() {
                             <>
                               <button
                                 className="btn"
-                                onClick={() => updateAlertStatus(alert.id, 'revisada')}
+                                onClick={() => openModal(alert, 'revisada')}
                               >
                                 Revisar
                               </button>
                               <button
                                 className="btn"
-                                onClick={() => updateAlertStatus(alert.id, 'resuelta')}
+                                onClick={() => openModal(alert, 'resuelta')}
                               >
                                 Resolver
                               </button>
                             </>
+                          )}
+                          {alert.estado_alerta === 'revisada' && (
+                            <button
+                              className="btn btn-success"
+                              onClick={() => openModal(alert, 'resuelta')}
+                            >
+                              Resolver
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -242,6 +282,15 @@ function AuditTrail() {
             </div>
           )}
         </>
+      )}
+
+      {modalOpen && selectedAlert && (
+        <AlertEditModal
+          alert={selectedAlert}
+          action={modalAction}
+          onClose={closeModal}
+          onConfirm={updateAlertStatus}
+        />
       )}
     </div>
   );

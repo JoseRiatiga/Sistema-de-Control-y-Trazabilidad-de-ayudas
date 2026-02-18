@@ -24,20 +24,21 @@ function Home() {
       const [deliveriesRes, alertsRes] = await Promise.all([
         axios.get('http://localhost:5000/api/aids/delivery', { headers }),
         axios.get('http://localhost:5000/api/audit/duplicate-alerts', {
-          headers,
-          params: { status: 'pendiente' }
+          headers
         })
       ]);
 
       const totalDeliveries = deliveriesRes.data.length;
       const alertsData = Array.isArray(alertsRes.data) ? alertsRes.data : [];
-      const pendingCount = alertsData.length;
+      // Filtrar: mostrar solo alertas NO resueltas (pendientes + revisadas)
+      const activeAlerts = alertsData.filter(a => a.estado_alerta !== 'resuelta');
+      const activeAlertsCount = activeAlerts.length;
 
       setStats({
         totalDeliveries,
-        pendingAlerts: pendingCount
+        pendingAlerts: activeAlertsCount
       });
-      setPendingAlerts(pendingCount);
+      setPendingAlerts(activeAlertsCount);
     } catch (err) {
       console.error('Error cargando datos del home:', err);
     } finally {

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS alertas_duplicidad (
   estado_alerta VARCHAR(50) DEFAULT 'pendiente' CHECK (estado_alerta IN ('pendiente', 'revisada', 'resuelta')),
   revisada_por UUID REFERENCES usuarios(id),
   revisada_en TIMESTAMP,
+  razon_resolucion VARCHAR(100),
   notas TEXT
 );
 

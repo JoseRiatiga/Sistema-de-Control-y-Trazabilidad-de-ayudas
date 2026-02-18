@@ -34,13 +34,15 @@ function Dashboard() {
       const [deliveriesRes, alertsRes] = await Promise.all([
         axios.get('http://localhost:5000/api/aids/delivery', { headers }),
         axios.get('http://localhost:5000/api/audit/duplicate-alerts', {
-          headers,
-          params: { status: 'pendiente' }
+          headers
         })
       ]);
 
       const deliveriesData = Array.isArray(deliveriesRes.data) ? deliveriesRes.data : [];
       const alertsData = Array.isArray(alertsRes.data) ? alertsRes.data : [];
+      
+      // Filtrar: mostrar solo alertas NO resueltas (pendientes + revisadas)
+      const activeAlerts = alertsData.filter(a => a.estado_alerta !== 'resuelta');
 
       // Estadísticas básicas
       const totalDeliveries = deliveriesData.length;
@@ -49,13 +51,13 @@ function Dashboard() {
       setStats({
         totalDeliveries,
         beneficiaries,
-        totalAlerts: alertsData.length
+        totalAlerts: activeAlerts.length
       });
 
-      setAlerts(alertsData.slice(0, 5));
+      setAlerts(activeAlerts.slice(0, 5));
       setDeliveries(deliveriesData);
 
-      // Procesar datos para gráficos
+      // Procesar datos para gráficos (usa todas las alertas para ver estado completo)
       processGraphData(deliveriesData, alertsData);
     } catch (err) {
       setError('Error cargando datos del dashboard');
@@ -114,12 +116,15 @@ function Dashboard() {
     // 4. Estadísticas de Alertas
     const alertStatus = {
       pendiente: alertsData.filter(a => a.estado_alerta === 'pendiente').length,
-      resuelto: alertsData.filter(a => a.estado_alerta === 'resuelto').length
+      revisada: alertsData.filter(a => a.estado_alerta === 'revisada').length,
+      resuelta: alertsData.filter(a => a.estado_alerta === 'resuelta').length
     };
     const alertsData2 = [
-      { name: 'Pendientes', value: alertStatus.pendiente, fill: '#e74c3c' },
-      { name: 'Resueltas', value: alertStatus.resuelto, fill: '#2ecc71' }
+      { name: 'Pendientes', value: alertStatus.pendiente || 0, fill: '#e74c3c' },
+      { name: 'Revisadas', value: alertStatus.revisada || 0, fill: '#f39c12' },
+      { name: 'Resueltas', value: alertStatus.resuelta || 0, fill: '#2ecc71' }
     ];
+    console.log('Alert Stats:', alertsData2);
     setAlertsStats(alertsData2);
   };
 
@@ -299,9 +304,9 @@ function Dashboard() {
               </div>
 
               {/* Alertas por Estado */}
-              {alertsStats.some(a => a.value > 0) && (
-                <div className="chart-card">
-                  <h2>Estado de Alertas</h2>
+              <div className="chart-card">
+                <h2>Estado de Alertas</h2>
+                {alertsStats && Array.isArray(alertsStats) && alertsStats.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -321,8 +326,12 @@ function Dashboard() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
-              )}
+                ) : (
+                  <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <p style={{ textAlign: 'center', color: '#999' }}>Cargando gráfica de alertas...</p>
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
