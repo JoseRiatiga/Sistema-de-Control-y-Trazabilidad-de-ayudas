@@ -16,4 +16,10 @@ router.get('/municipality/:municipality', CensoController.getByMunicipality);
 router.get('/cedula/:cedula', CensoController.searchByIdentification);
 router.get('/:id', CensoController.getById);
 
+// Actualizar beneficiario
+router.put('/:id', CensoController.update);
+
+// Eliminar beneficiario
+router.delete('/:id', CensoController.delete);
+
 module.exports = router;

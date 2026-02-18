@@ -200,6 +200,30 @@ class CensoController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  static async update(req, res) {
+    try {
+      const { Censado } = require('../models');
+      const { id } = req.params;
+      const censado = await Censado.update(id, req.body);
+      return res.json({ message: 'Beneficiario actualizado', censado });
+    } catch (error) {
+      console.error('Update censado error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async delete(req, res) {
+    try {
+      const { Censado } = require('../models');
+      const { id } = req.params;
+      const censado = await Censado.delete(id);
+      return res.json({ message: 'Beneficiario eliminado', censado });
+    } catch (error) {
+      console.error('Delete censado error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 // Controlador de Tipos de Ayuda
@@ -258,10 +282,22 @@ class AidDeliveryController {
   static async getByBeneficiary(req, res) {
     try {
       const { AidDelivery } = require('../models');
-      const deliveries = await AidDelivery.getByBeneficiary(req.params.censado_id);
+      const censadoId = req.params.censado_id;
+      
+      console.log('▶ getByBeneficiary llamado');
+      console.log('  censado_id recibido:', censadoId);
+      console.log('  tipo:', typeof censadoId);
+      
+      const deliveries = await AidDelivery.getByBeneficiary(censadoId);
+      
+      console.log('  entregas encontradas:', deliveries.length);
+      if (deliveries.length > 0) {
+        console.log('  primera entrega:', deliveries[0]);
+      }
+      
       return res.json(deliveries);
     } catch (error) {
-      console.error('Get deliveries error:', error);
+      console.error('❌ Get deliveries error:', error);
       return res.status(500).json({ error: error.message });
     }
   }
@@ -290,6 +326,26 @@ class AidDeliveryController {
       return res.json(deliveries);
     } catch (error) {
       console.error('Get all deliveries error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async delete(req, res) {
+    try {
+      const { AidDelivery } = require('../models');
+      const { auditLog } = require('../middleware/auth');
+      
+      const deleted = await AidDelivery.delete(req.params.id);
+      
+      // Registrar en auditoría
+      await auditLog('ELIMINAR', 'entregas_ayuda', req.params.id, deleted, null);
+      
+      return res.json({ 
+        message: 'Entrega eliminada correctamente',
+        delivery: deleted 
+      });
+    } catch (error) {
+      console.error('Delete delivery error:', error);
       return res.status(500).json({ error: error.message });
     }
   }

@@ -7,6 +7,7 @@ function Dashboard() {
   const { user } = useContext(AuthContext);
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,19 +29,20 @@ function Dashboard() {
         })
       ]);
 
-      const deliveries = Array.isArray(deliveriesRes.data) ? deliveriesRes.data : [];
-      const totalDeliveries = deliveries.length;
-      const beneficiaries = new Set(deliveries.map(d => d.censado_id)).size;
+      const deliveriesData = Array.isArray(deliveriesRes.data) ? deliveriesRes.data : [];
+      const totalDeliveries = deliveriesData.length;
+      const beneficiaries = new Set(deliveriesData.map(d => d.censado_id)).size;
 
-      const alerts = Array.isArray(alertsRes.data) ? alertsRes.data : [];
+      const alertsData = Array.isArray(alertsRes.data) ? alertsRes.data : [];
       
       setStats({
         totalDeliveries,
         beneficiaries,
-        totalAlerts: alerts.length
+        totalAlerts: alertsData.length
       });
 
-      setAlerts(alerts.slice(0, 5));
+      setAlerts(alertsData.slice(0, 5));
+      setDeliveries(deliveriesData);
     } catch (err) {
       setError('Error cargando datos del dashboard');
       console.error(err);
@@ -100,6 +102,56 @@ function Dashboard() {
                 </table>
               </div>
             )}
+
+            {/* Trazabilidad Completa */}
+            <div className="card">
+              <h2>🔍 Trazabilidad de Entregas (Origen → Destino)</h2>
+              
+              {deliveries.length > 0 ? (
+                <table className="table traceability-table">
+                  <thead>
+                    <tr>
+                      <th colSpan="3">📦 ORIGEN (Almacén)</th>
+                      <th colSpan="2">📋 PRODUCTO</th>
+                      <th colSpan="4">👤 DESTINO (Beneficiario)</th>
+                      <th colSpan="2">📤 ENTREGA</th>
+                    </tr>
+                    <tr>
+                      <th>Municipio</th>
+                      <th>Ubicación</th>
+                      <th>Stock</th>
+                      <th>Tipo</th>
+                      <th>Cantidad</th>
+                      <th>Nombre</th>
+                      <th>Cédula</th>
+                      <th>Municipio</th>
+                      <th>Operador</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliveries.map(delivery => (
+                      <tr key={delivery.id}>
+                        <td>{delivery.municipio_almacen || 'N/A'}</td>
+                        <td>{delivery.ubicacion_almacen || 'N/A'}</td>
+                        <td>{delivery.cantidad_disponible || 'N/A'}</td>
+                        <td>{delivery.aid_type_name}</td>
+                        <td><strong>{delivery.cantidad_entregada}</strong></td>
+                        <td>{delivery.primer_nombre} {delivery.primer_apellido || ''}</td>
+                        <td>{delivery.cedula}</td>
+                        <td>{delivery.municipio_beneficiario}</td>
+                        <td>{delivery.operator_name}</td>
+                        <td>{new Date(delivery.fecha_entrega).toLocaleDateString('es-ES')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p style={{ textAlign: 'center', color: '#7f8c8d', padding: '20px' }}>
+                  No hay entregas registradas
+                </p>
+              )}
+            </div>
           </>
         )}
       </div>
