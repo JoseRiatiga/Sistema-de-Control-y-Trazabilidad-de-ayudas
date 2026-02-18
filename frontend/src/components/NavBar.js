@@ -12,7 +12,8 @@ function NavBar({ onLogout }) {
         <h1>Sistema de Ayudas</h1>
       </div>
       <div className="navbar-links">
-        <Link to="/panel">Panel Principal</Link>
+        <Link to="/inicio">Inicio</Link>
+        <Link to="/panel">Dashboard</Link>
         {(user.rol === 'operador' || user.rol === 'administrador') && (
           <Link to="/registrar-ayuda">Registrar Ayuda</Link>
         )}

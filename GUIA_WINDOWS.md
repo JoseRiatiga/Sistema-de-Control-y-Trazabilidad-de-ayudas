@@ -152,7 +152,8 @@ Get-Process | Where-Object {$_.Handles -like "*3000*"}
 3. ¡Listo!
 
 ### Rutas Principales:
-- Panel Principal: http://localhost:3000/panel
+- Inicio: http://localhost:3000/inicio
+- Panel (Dashboard): http://localhost:3000/panel
 - Registrar Ayuda: http://localhost:3000/registrar-ayuda
 - Inventario: http://localhost:3000/inventario
 - Beneficiarios: http://localhost:3000/beneficiarios

@@ -182,6 +182,7 @@ App.js (Componente raíz)
 │   └── Botón de logout
 ├── Routes
 │   ├── /ingreso → Login
+│   ├── /inicio → Home (Landing Page)
 │   ├── /panel → Dashboard
 │   ├── /registrar-ayuda → AidRegistration
 │   ├── /inventario → InventoryManagement

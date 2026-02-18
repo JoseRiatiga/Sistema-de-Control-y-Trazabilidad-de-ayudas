@@ -4,6 +4,7 @@ import './App.css';
 
 // Importar páginas
 import Login from './pages/Login';
+import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import AidRegistration from './pages/AidRegistration';
 import InventoryManagement from './pages/InventoryManagement';
@@ -52,7 +53,11 @@ function App() {
         <Routes>
           <Route
             path="/ingreso"
-            element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/panel" />}
+            element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/inicio" />}
+          />
+          <Route
+            path="/inicio"
+            element={isAuthenticated ? <Home /> : <Navigate to="/ingreso" />}
           />
           <Route
             path="/panel"
@@ -60,29 +65,29 @@ function App() {
           />
           <Route
             path="/registrar-ayuda"
-            element={isAuthenticated && (user.rol === 'operador' || user.rol === 'administrador') ? <AidRegistration /> : <Navigate to="/panel" />}
+            element={isAuthenticated && (user.rol === 'operador' || user.rol === 'administrador') ? <AidRegistration /> : <Navigate to="/inicio" />}
           />
           <Route
             path="/inventario"
-            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <InventoryManagement /> : <Navigate to="/panel" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <InventoryManagement /> : <Navigate to="/inicio" />}
           />
           <Route
             path="/beneficiarios"
-            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <BeneficiaryManagement /> : <Navigate to="/panel" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <BeneficiaryManagement /> : <Navigate to="/inicio" />}
           />
           <Route
             path="/reportes"
-            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <Reports /> : <Navigate to="/panel" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <Reports /> : <Navigate to="/inicio" />}
           />
           <Route
             path="/auditorias"
-            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <AuditTrail /> : <Navigate to="/panel" />}
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'auditor') ? <AuditTrail /> : <Navigate to="/inicio" />}
           />
           <Route
             path="/usuarios"
-            element={isAuthenticated && user.rol === 'administrador' ? <UserManagement /> : <Navigate to="/panel" />}
+            element={isAuthenticated && user.rol === 'administrador' ? <UserManagement /> : <Navigate to="/inicio" />}
           />
-          <Route path="/" element={<Navigate to={isAuthenticated ? '/panel' : '/ingreso'} />} />
+          <Route path="/" element={<Navigate to={isAuthenticated ? '/inicio' : '/ingreso'} />} />
         </Routes>
       </Router>
     </AuthContext.Provider>
