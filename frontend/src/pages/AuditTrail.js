@@ -26,6 +26,21 @@ function AuditTrail() {
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
+  // Mapeo de nombres de tablas a español
+  const translateTableName = (tableName) => {
+    const tableMapping = {
+      'entregas_ayuda': 'Entregas de Ayuda',
+      'censados': 'Beneficiarios',
+      'tipos_ayuda': 'Tipos de Ayuda',
+      'inventario': 'Inventario',
+      'usuarios': 'Usuarios',
+      'alertas_duplicidad': 'Alertas de Duplicidad',
+      'comprobantes_entrega': 'Comprobantes de Entrega',
+      'bitacora_auditoria': 'Bitácora de Auditoría'
+    };
+    return tableMapping[tableName] || tableName.replace(/_/g, ' ').toUpperCase();
+  };
+
   // Debug logging
   useEffect(() => {
     console.log('🔍 AuditTrail Debug:');
@@ -408,7 +423,7 @@ function AuditTrail() {
                       <th>Fecha/Hora</th>
                       <th>Usuario</th>
                       <th>Acción</th>
-                      <th>Tabla</th>
+                      <th>Recurso Modificado</th>
                       <th>Detalles</th>
                     </tr>
                   </thead>
@@ -418,7 +433,7 @@ function AuditTrail() {
                         <td>{new Date(entry.fecha || entry.timestamp).toLocaleString()}</td>
                         <td>{entry.user_name || 'Sistema'}</td>
                         <td>{entry.accion || entry.action}</td>
-                        <td>{entry.nombre_tabla || entry.table_name}</td>
+                        <td>{translateTableName(entry.nombre_tabla || entry.table_name)}</td>
                         <td>{(entry.accion || entry.action) === 'UPDATE' ? 'Modificado' : 'Creado'}</td>
                       </tr>
                     ))}
