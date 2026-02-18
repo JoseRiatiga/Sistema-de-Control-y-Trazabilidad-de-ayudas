@@ -12,9 +12,12 @@ router.post('/types', verifyRole(['administrador']), AidTypeController.create);
 router.get('/types', AidTypeController.getAll);
 
 // Rutas para entregas (operadores y admins)
+// IMPORTANTE: Poner rutas más específicas ANTES que las genéricas
+router.get('/inventory-check/:aidTypeId/:municipality', AidDeliveryController.checkInventoryAvailability);
 router.post('/delivery', verifyRole(['administrador', 'operador']), checkDuplicateDelivery, AidDeliveryController.create);
 router.get('/delivery', AidDeliveryController.getAll);
 router.get('/delivery/beneficiary/:censado_id', AidDeliveryController.getByBeneficiary);
 router.get('/delivery/municipality/:municipality', AidDeliveryController.getByMunicipality);
+router.delete('/delivery/:id', verifyRole(['administrador', 'operador']), AidDeliveryController.delete);
 
 module.exports = router;

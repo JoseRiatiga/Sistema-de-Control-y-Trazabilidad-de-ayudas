@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AidRegistration from './pages/AidRegistration';
 import InventoryManagement from './pages/InventoryManagement';
+import BeneficiaryManagement from './pages/BeneficiaryManagement';
 import Reports from './pages/Reports';
 import AuditTrail from './pages/AuditTrail';
 import UserManagement from './pages/UserManagement';
@@ -64,6 +65,10 @@ function App() {
           <Route
             path="/inventory"
             element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <InventoryManagement /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/beneficiaries"
+            element={isAuthenticated && (user.rol === 'administrador' || user.rol === 'operador') ? <BeneficiaryManagement /> : <Navigate to="/dashboard" />}
           />
           <Route
             path="/reports"

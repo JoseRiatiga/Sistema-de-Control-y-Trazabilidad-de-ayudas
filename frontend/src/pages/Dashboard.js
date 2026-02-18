@@ -105,21 +105,20 @@ function Dashboard() {
 
             {/* Trazabilidad Completa */}
             <div className="card">
-              <h2>🔍 Trazabilidad de Entregas (Origen → Destino)</h2>
+              <h2>Trazabilidad de Entregas (Origen → Destino)</h2>
               
               {deliveries.length > 0 ? (
                 <table className="table traceability-table">
                   <thead>
                     <tr>
-                      <th colSpan="3">📦 ORIGEN (Almacén)</th>
-                      <th colSpan="2">📋 PRODUCTO</th>
-                      <th colSpan="4">👤 DESTINO (Beneficiario)</th>
-                      <th colSpan="2">📤 ENTREGA</th>
+                      <th colSpan="2">ORIGEN (Almacén)</th>
+                      <th colSpan="2">PRODUCTO</th>
+                      <th colSpan="4">DESTINO (Beneficiario)</th>
+                      <th colSpan="2">ENTREGA</th>
                     </tr>
                     <tr>
                       <th>Municipio</th>
                       <th>Ubicación</th>
-                      <th>Stock</th>
                       <th>Tipo</th>
                       <th>Cantidad</th>
                       <th>Nombre</th>
@@ -134,7 +133,6 @@ function Dashboard() {
                       <tr key={delivery.id}>
                         <td>{delivery.municipio_almacen || 'N/A'}</td>
                         <td>{delivery.ubicacion_almacen || 'N/A'}</td>
-                        <td>{delivery.cantidad_disponible || 'N/A'}</td>
                         <td>{delivery.aid_type_name}</td>
                         <td><strong>{delivery.cantidad_entregada}</strong></td>
                         <td>{delivery.primer_nombre} {delivery.primer_apellido || ''}</td>

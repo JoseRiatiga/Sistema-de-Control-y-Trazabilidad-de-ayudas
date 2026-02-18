@@ -4,6 +4,7 @@ import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './AidRegistration.css';
 
 function AidRegistration() {
+  // Estados para formulario de ayuda
   const [formData, setFormData] = useState({
     censado_id: '',
     tipo_ayuda_id: '',
@@ -12,12 +13,23 @@ function AidRegistration() {
     notas: ''
   });
 
+  // Estado para los items agregados de ayudas
+  const [aidItems, setAidItems] = useState([]);
+
+  // Estado para entregas ya registradas del beneficiario
+  const [registeredDeliveries, setRegisteredDeliveries] = useState([]);
+
   const [censados, setCensados] = useState([]);
   const [aidTypes, setAidTypes] = useState([]);
   const [duplicateAlert, setDuplicateAlert] = useState(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchBeneficiary, setSearchBeneficiary] = useState('');
+  const [showBeneficiaryDropdown, setShowBeneficiaryDropdown] = useState(false);
+  const [censadosWithDeliveries, setCensadosWithDeliveries] = useState([]);
+  const [inventoryStatus, setInventoryStatus] = useState(null); // Estado de disponibilidad de inventario
+  const [checkingInventory, setCheckingInventory] = useState(false); // Indicador de carga
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -25,6 +37,11 @@ function AidRegistration() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Monitorear cambios en censado_id
+  useEffect(() => {
+    console.log('▶▶▶ formData.censado_id cambió a:', formData.censado_id);
+  }, [formData.censado_id]);
 
   const fetchData = async () => {
     try {
@@ -35,38 +52,214 @@ function AidRegistration() {
 
       setCensados(censadosRes.data);
       setAidTypes(aidTypesRes.data);
+      
+      // Cargar beneficiarios con entregas para información del usuario
+      fetchCensadosWithDeliveries();
     } catch (err) {
       setError('Error cargando datos');
       console.error(err);
     }
   };
 
+  const fetchCensadosWithDeliveries = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/aids/delivery', { headers });
+      // Agrupar entregas por censado_id
+      const deliveriesByCensado = {};
+      response.data.forEach(delivery => {
+        if (!deliveriesByCensado[delivery.censado_id]) {
+          deliveriesByCensado[delivery.censado_id] = true;
+        }
+      });
+      setCensadosWithDeliveries(Object.keys(deliveriesByCensado));
+    } catch (err) {
+      console.error('Error cargando beneficiarios con entregas:', err);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Si el cambio es en censado_id, auto-llenar el municipio y cargar entregas
+    if (name === 'censado_id') {
+      console.log('▶ handleChange censado_id:', value);
+      const selectedCensado = censados.find(c => c.id === value);
+      console.log('  Censado encontrado:', selectedCensado);
+      
+      const newFormData = {
+        ...formData,
+        censado_id: value,
+        municipio: selectedCensado ? selectedCensado.municipio : ''
+      };
+      
+      setFormData(newFormData);
+      
+      // Cargar entregas registradas de este beneficiario
+      if (value) {
+        console.log('  Llamando fetchBeneficiaryDeliveries...');
+        fetchBeneficiaryDeliveries(value);
+      } else {
+        setRegisteredDeliveries([]);
+      }
+    } else if (name === 'tipo_ayuda_id') {
+      console.log('▶ handleChange tipo_ayuda_id:', value);
+      console.log('  municipio actual en formData:', formData.municipio);
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // Verificar inventario cuando cambia el tipo de ayuda
+      // Usar el municipio actual de formData
+      if (value && formData.municipio) {
+        console.log('  Llamando checkInventory con:', value, formData.municipio);
+        checkInventory(value, formData.municipio);
+      } else {
+        console.log('  No se puede verificar - falta tipo_ayuda_id o municipio');
+        setInventoryStatus(null);
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const fetchBeneficiaryDeliveries = async (censadoId) => {
+    try {
+      console.log('▶▶ INICIANDO FETCH DE ENTREGAS');
+      console.log('   censado_id:', censadoId);
+      console.log('   tipo:', typeof censadoId);
+      
+      const url = `http://localhost:5000/api/aids/delivery/beneficiary/${censadoId}`;
+      console.log('   URL:', url);
+      
+      const response = await axios.get(url, { headers });
+      console.log('   Status:', response.status);
+      console.log('   Datos recibidos:', response.data);
+      console.log('   Total de entregas:', response.data?.length || 0);
+      
+      // Ordenar entregas por fecha (más recientes primero)
+      const sortedDeliveries = (response.data || []).sort(
+        (a, b) => new Date(b.fecha_entrega) - new Date(a.fecha_entrega)
+      );
+      
+      setRegisteredDeliveries(sortedDeliveries);
+    } catch (err) {
+      console.error('❌ ERROR CARGANDO ENTREGAS');
+      console.error('   Status:', err.response?.status);
+      console.error('   Error data:', err.response?.data);
+      console.error('   Mensaje:', err.message);
+      
+      setError(`Error al cargar entregas: ${err.response?.data?.error || err.message}`);
+      setRegisteredDeliveries([]);
+      setTimeout(() => setError(''), 5000);
+    }
+  };
+
+  const handleBeneficiarySearch = (e) => {
+    const value = e.target.value;
+    setSearchBeneficiary(value);
+    setShowBeneficiaryDropdown(value.length > 0);
+  };
+
+  const handleSelectBeneficiary = (censado) => {
+    console.log('▶ Seleccionando beneficiario:', censado);
+    console.log('  ID:', censado.id);
+    console.log('  Nombre:', censado.primer_nombre, censado.primer_apellido);
+    console.log('  Municipio:', censado.municipio);
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      censado_id: censado.id,
+      municipio: censado.municipio,
+      tipo_ayuda_id: '' // Limpiar selección de tipo de ayuda
     }));
+    setSearchBeneficiary('');
+    setShowBeneficiaryDropdown(false);
+    setInventoryStatus(null); // Limpiar estado de inventario
+    
+    // Cargar entregas después de seleccionar el beneficiario
+    fetchBeneficiaryDeliveries(censado.id);
+  };
+
+  // Filtrar beneficiarios según la búsqueda
+  const filteredBeneficiaries = searchBeneficiary.length > 0
+    ? censados.filter(c =>
+        `${c.primer_nombre} ${c.primer_apellido} ${c.cedula}`
+          .toLowerCase()
+          .includes(searchBeneficiary.toLowerCase())
+      )
+    : [];
+
+  const checkInventory = async (aidTypeId, municipality) => {
+    if (!aidTypeId || !municipality) {
+      console.log('⚠️  checkInventory: faltan parámetros', { aidTypeId, municipality });
+      setInventoryStatus(null);
+      return;
+    }
+
+    try {
+      setCheckingInventory(true);
+      console.log('🔍 Llamando API de inventario:');
+      console.log('  aidTypeId:', aidTypeId);
+      console.log('  municipality:', municipality);
+      
+      const response = await axios.get(
+        `http://localhost:5000/api/aids/inventory-check/${aidTypeId}/${municipality}`,
+        { headers }
+      );
+      
+      console.log('✓ Respuesta del servidor:', response.data);
+      setInventoryStatus(response.data);
+    } catch (err) {
+      console.error('❌ Error checking inventory:', err);
+      setInventoryStatus({
+        disponible: false,
+        cantidad: 0,
+        mensaje: 'Error verificando inventario'
+      });
+    } finally {
+      setCheckingInventory(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (aidItems.length === 0) {
+      setError('Agrega al menos un tipo de ayuda');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
     setError('');
     setDuplicateAlert(null);
 
     try {
-      const response = await axios.post(
-        'http://localhost:5000/api/aids/delivery',
-        formData,
-        { headers }
-      );
+      // Registrar todos los items
+      for (const item of aidItems) {
+        const deliveryData = {
+          censado_id: formData.censado_id,
+          tipo_ayuda_id: item.tipo_ayuda_id,
+          cantidad: item.cantidad,
+          municipio: formData.municipio,
+          notas: formData.notas
+        };
 
-      setMessage('Ayuda registrada exitosamente');
-      setDuplicateAlert(response.data.duplicateAlert);
+        await axios.post(
+          'http://localhost:5000/api/aids/delivery',
+          deliveryData,
+          { headers }
+        );
+      }
+
+      setMessage(`✓ ${aidItems.length} ayuda(s) registrada(s) exitosamente`);
       
-      // Limpiar formulario
+      // Limpiar todo
       setFormData({
         censado_id: '',
         tipo_ayuda_id: '',
@@ -74,14 +267,67 @@ function AidRegistration() {
         municipio: '',
         notas: ''
       });
+      setAidItems([]);
 
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al registrar ayuda');
+      setError(err.response?.data?.error || 'Error al registrar ayudas');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleAddAidItem = (e) => {
+    e.preventDefault();
+    
+    if (!formData.tipo_ayuda_id || !formData.cantidad) {
+      setError('Selecciona tipo de ayuda y cantidad');
+      return;
+    }
+
+    const selectedAid = aidTypes.find(a => a.id === formData.tipo_ayuda_id);
+    
+    const newItem = {
+      id: Date.now(),
+      tipo_ayuda_id: formData.tipo_ayuda_id,
+      nombre: selectedAid.nombre,
+      unidad: selectedAid.unidad,
+      cantidad: formData.cantidad
+    };
+
+    setAidItems([...aidItems, newItem]);
+    setError('');
+    
+    // Limpiar solo tipo_ayuda_id y cantidad
+    setFormData(prev => ({
+      ...prev,
+      tipo_ayuda_id: '',
+      cantidad: ''
+    }));
+  };
+
+  const handleRemoveAidItem = (itemId) => {
+    setAidItems(aidItems.filter(item => item.id !== itemId));
+  };
+
+  const handleDeleteDelivery = async (deliveryId) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar esta entrega?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:5000/api/aids/delivery/${deliveryId}`, { headers });
+      setMessage('✓ Entrega eliminada correctamente');
+      // Recargar las entregas del beneficiario
+      if (formData.censado_id) {
+        fetchBeneficiaryDeliveries(formData.censado_id);
+      }
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setError('Error al eliminar la entrega: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
 
   return (
     <div className="container aid-registration">
@@ -98,88 +344,251 @@ function AidRegistration() {
         </div>
       )}
 
-      <div className="card">
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="censado_id">Beneficiario</label>
-            <select
-              id="censado_id"
-              name="censado_id"
-              value={formData.censado_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccionar beneficiario</option>
-              {censados.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.primer_nombre} {c.primer_apellido} ({c.cedula})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="aid_type_id">Tipo de Ayuda</label>
-            <select
-              id="tipo_ayuda_id"
-              name="tipo_ayuda_id"
-              value={formData.tipo_ayuda_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccionar tipo de ayuda</option>
-              {aidTypes.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.nombre} ({a.unidad})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="cantidad">Cantidad</label>
-            <input
-              type="number"
-              id="cantidad"
-              name="cantidad"
-              value={formData.cantidad}
-              onChange={handleChange}
-              required
-              min="1"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="municipio">Municipio</label>
-            <select
-              id="municipio"
-              name="municipio"
-              value={formData.municipio}
-              onChange={handleChange}
-              required
-            >
-              <option value="">-- Seleccionar municipio --</option>
-              {COLOMBIAN_MUNICIPALITIES.map((mun) => (
-                <option key={mun} value={mun}>{mun}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="notas">Observaciones</label>
-            <textarea
-              id="notas"
-              name="notas"
-              value={formData.notas}
-              onChange={handleChange}
-              placeholder="Observaciones adicionales..."
-            ></textarea>
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Registrando...' : 'Registrar Ayuda'}
+      {/* Pestañas */}
+      <div className="tabs-container">
+        <div className="tabs-header">
+          <button
+            className={`tab-button active`}
+          >
+            Registrar Ayuda
           </button>
-        </form>
+        </div>
+
+        {/* Pestaña: Registrar Ayuda */}
+        {true && (
+          <div className="tab-content">
+            <div className="card">
+              <form onSubmit={handleSubmit}>
+                <div className="form-group beneficiary-search-group">
+                  <label htmlFor="beneficiary_search">Beneficiario</label>
+                  <div className="beneficiary-search-container">
+                    <input
+                      id="beneficiary_search"
+                      type="text"
+                      placeholder="Escribe nombre o cédula del beneficiario..."
+                      value={searchBeneficiary}
+                      onChange={handleBeneficiarySearch}
+                      onFocus={() => searchBeneficiary && setShowBeneficiaryDropdown(true)}
+                      required={!formData.censado_id}
+                    />
+                    {showBeneficiaryDropdown && filteredBeneficiaries.length > 0 && (
+                      <div className="beneficiary-dropdown">
+                        {filteredBeneficiaries.map(c => (
+                          <div
+                            key={c.id}
+                            className="beneficiary-option"
+                            onClick={() => handleSelectBeneficiary(c)}
+                          >
+                            <div className="beneficiary-name">
+                              {c.primer_nombre} {c.primer_apellido}
+                              {censadosWithDeliveries.includes(c.id) && (
+                                <span style={{ marginLeft: '10px', color: '#27ae60', fontWeight: 'bold' }}>(con entregas)</span>
+                              )}
+                            </div>
+                            <div className="beneficiary-cedula">{c.cedula}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {showBeneficiaryDropdown && searchBeneficiary && filteredBeneficiaries.length === 0 && (
+                      <div className="beneficiary-dropdown">
+                        <div className="no-results">No se encontró beneficiario</div>
+                      </div>
+                    )}
+                  </div>
+                  {formData.censado_id && (
+                    <div className="selected-beneficiary">
+                      ✓ Seleccionado: {censados.find(c => c.id === formData.censado_id)?.primer_nombre} {censados.find(c => c.id === formData.censado_id)?.primer_apellido}
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="aid_type_id">Tipo de Ayuda</label>
+                  <select
+                    id="tipo_ayuda_id"
+                    name="tipo_ayuda_id"
+                    value={formData.tipo_ayuda_id}
+                    onChange={handleChange}
+                  >
+                    <option value="">Seleccionar tipo de ayuda</option>
+                    {aidTypes
+                      .filter(a => a.nombre.toLowerCase() !== 'donaciones')
+                      .map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.nombre} ({a.unidad})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Indicador de disponibilidad de inventario */}
+                {formData.tipo_ayuda_id && (
+                  <div style={{
+                    padding: '10px 15px',
+                    marginBottom: '15px',
+                    borderRadius: '4px',
+                    backgroundColor: inventoryStatus?.disponible ? '#d4edda' : '#f8d7da',
+                    borderLeft: `4px solid ${inventoryStatus?.disponible ? '#28a745' : '#dc3545'}`,
+                    fontSize: '13px'
+                  }}>
+                    {checkingInventory ? (
+                      <span style={{ color: '#666' }}>Verificando disponibilidad...</span>
+                    ) : inventoryStatus ? (
+                      <>
+                        {inventoryStatus.disponible ? (
+                          <span style={{ color: '#155724' }}>
+                            ✓ {inventoryStatus.cantidad} unidades disponibles en {inventoryStatus.ubicacion || formData.municipio}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#721c24' }}>
+                            ✗ No hay disponibilidad en {formData.municipio}
+                          </span>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="cantidad">Cantidad</label>
+                  <input
+                    type="number"
+                    id="cantidad"
+                    name="cantidad"
+                    value={formData.cantidad}
+                    onChange={handleChange}
+                    min="1"
+                  />
+                </div>
+
+                <button 
+                  type="button" 
+                  className="btn btn-success"
+                  onClick={handleAddAidItem}
+                  style={{ marginBottom: '20px' }}
+                  disabled={checkingInventory}
+                >
+                  Agregar Tipo de Ayuda
+                </button>
+
+                {/* Tabla de items agregados */}
+                {aidItems.length > 0 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h3>Ayudas Seleccionadas</h3>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Tipo de Ayuda</th>
+                          <th>Cantidad</th>
+                          <th>Unidad</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aidItems.map(item => (
+                          <tr key={item.id}>
+                            <td>{item.nombre}</td>
+                            <td>{item.cantidad}</td>
+                            <td>{item.unidad}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleRemoveAidItem(item.id)}
+                              >
+                                Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Tabla de entregas ya registradas */}
+                {formData.censado_id && (
+                  <div style={{ marginBottom: '20px', border: '1px solid #ddd', padding: '15px', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+                    <h3>Entregas Registradas para este Beneficiario</h3>
+                    {registeredDeliveries.length > 0 ? (
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Tipo de Ayuda</th>
+                            <th>Cantidad</th>
+                            <th>Operador</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {registeredDeliveries.map(delivery => (
+                            <tr key={delivery.id}>
+                              <td>{delivery.aid_type_name}</td>
+                              <td>{delivery.cantidad}</td>
+                              <td>{delivery.operator_name || 'Sistema'}</td>
+                              <td>{new Date(delivery.fecha_entrega).toLocaleDateString('es-ES')}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleDeleteDelivery(delivery.id)}
+                                >
+                                  Eliminar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div style={{ padding: '15px', textAlign: 'center', color: '#7f8c8d' }}>
+                        <p>✓ No hay entregas registradas para este beneficiario</p>
+                        <small>Una vez registres ayudas, aparecerán aquí para que puedas consultarlas o eliminarlas</small>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label htmlFor="municipio">Municipio</label>
+                  <input
+                    type="text"
+                    id="municipio"
+                    name="municipio"
+                    value={formData.municipio}
+                    readOnly
+                    className="input-readonly"
+                    placeholder="Se asigna automáticamente según el beneficiario"
+                  />
+                  <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>
+                    Se asigna automáticamente según el beneficiario seleccionado
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="notas">Observaciones</label>
+                  <textarea
+                    id="notas"
+                    name="notas"
+                    value={formData.notas}
+                    onChange={handleChange}
+                    placeholder="Observaciones adicionales..."
+                  ></textarea>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={loading || aidItems.length === 0}
+                >
+                  {loading ? 'Registrando...' : `📤 Registrar ${aidItems.length} Ayuda(s)`}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -19,6 +19,9 @@ function NavBar({ onLogout }) {
         {(user.rol === 'operador' || user.rol === 'administrador') && (
           <Link to="/inventory">Inventario</Link>
         )}
+        {(user.rol === 'operador' || user.rol === 'administrador') && (
+          <Link to="/beneficiaries">Beneficiarios</Link>
+        )}
         {(user.rol === 'administrador' || user.rol === 'auditor') && (
           <Link to="/reports">Reportes</Link>
         )}

@@ -255,26 +255,112 @@ class AidTypeController {
 class AidDeliveryController {
   static async create(req, res) {
     try {
-      const { AidDelivery } = require('../models');
+      const { AidDelivery, Censado, Inventory } = require('../models');
       const { auditLog } = require('../middleware/auth');
       
+      const { censado_id, tipo_ayuda_id, cantidad } = req.body;
+
+      // 1. Obtener datos del beneficiario
+      const beneficiary = await Censado.findById(censado_id);
+      if (!beneficiary) {
+        return res.status(404).json({ error: 'Beneficiario no encontrado' });
+      }
+
+      // 2. Verificar disponibilidad en inventario del municipio específico
+      const inventory = await Inventory.getByAidTypeAndMunicipality(tipo_ayuda_id, beneficiary.municipio);
+      
+      if (!inventory) {
+        return res.status(400).json({ 
+          error: `No hay inventario del producto en ${beneficiary.municipio}. Verifique la disponibilidad en ese municipio.`,
+          disponible: 0,
+          municipio: beneficiary.municipio
+        });
+      }
+
+      if (inventory.cantidad < cantidad) {
+        return res.status(400).json({ 
+          error: `Cantidad insuficiente. Disponible: ${inventory.cantidad}, Solicitado: ${cantidad} en ${beneficiary.municipio}`,
+          disponible: inventory.cantidad,
+          solicitado: cantidad,
+          municipio: beneficiary.municipio
+        });
+      }
+
+      // 3. Crear la entrega
       const deliveryData = {
         ...req.body,
-        operador_id: req.userId
+        operador_id: req.userId,
+        municipio: beneficiary.municipio
       };
       
       const delivery = await AidDelivery.create(deliveryData);
+
+      // 4. Restar del inventario
+      const updatedInventory = await Inventory.decreaseQuantity(inventory.id, cantidad);
       
-      // Registrar en auditoría
+      if (!updatedInventory) {
+        // Si falla la actualización, eliminar la entrega creada
+        await AidDelivery.delete(delivery.id);
+        return res.status(500).json({ 
+          error: 'Error al actualizar inventario. Entrega cancelada.' 
+        });
+      }
+
+      // 5. Registrar en auditoría
       await auditLog('CREAR', 'entregas_ayuda', delivery.id, null, delivery);
       
       return res.status(201).json({
         message: 'Ayuda entregada exitosamente',
         delivery,
+        inventoryUpdated: {
+          cantidadAnterior: inventory.cantidad,
+          cantidadNueva: updatedInventory.cantidad
+        },
         duplicateAlert: res.locals.duplicateAlert || null
       });
     } catch (error) {
       console.error('Create aid delivery error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async checkInventoryAvailability(req, res) {
+    try {
+      const { Inventory } = require('../models');
+      const { aidTypeId, municipality } = req.params;
+
+      console.log('🔍 Verificando inventario:');
+      console.log('  aidTypeId:', aidTypeId, `(tipo: ${typeof aidTypeId})`);
+      console.log('  municipality:', municipality, `(tipo: ${typeof municipality})`);
+
+      const inventory = await Inventory.getByAidTypeAndMunicipality(aidTypeId, municipality);
+      
+      console.log('  Resultado de búsqueda:', inventory);
+
+      if (!inventory) {
+        console.log('  ❌ No se encontró inventario');
+        return res.json({
+          disponible: false,
+          cantidad: 0,
+          municipio: municipality,
+          mensaje: `No hay inventario disponible en ${municipality}`
+        });
+      }
+
+      console.log('  ✓ Inventario encontrado:', {
+        cantidad: inventory.cantidad,
+        ubicacion: inventory.ubicacion_almacen
+      });
+
+      return res.json({
+        disponible: inventory.cantidad > 0,
+        cantidad: inventory.cantidad,
+        municipio: municipality,
+        ubicacion: inventory.ubicacion_almacen,
+        mensaje: `Disponible: ${inventory.cantidad} unidades en ${inventory.ubicacion_almacen}`
+      });
+    } catch (error) {
+      console.error('Check inventory error:', error);
       return res.status(500).json({ error: error.message });
     }
   }

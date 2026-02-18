@@ -187,7 +187,7 @@ function UserManagement() {
       {currentUser?.rol === 'administrador' && (
         <>
           <div className="card permissions-card">
-            <h2>📋 Permisos por Rol</h2>
+            <h2>Permisos por Rol</h2>
             <div className="permissions-table-wrapper">
               <table className="permissions-table">
                 <thead>
@@ -378,7 +378,7 @@ function UserManagement() {
                             title={currentUser?.id === user.id ? "No puedes eliminar tu propia cuenta" : "Eliminar usuario"}
                             disabled={currentUser?.id === user.id}
                           >
-                            🗑️ Eliminar
+                            Eliminar
                           </button>
                         </td>
                       </tr>

@@ -122,6 +122,61 @@ class Censado {
     const result = await global.db.query(query, [limit, offset]);
     return result.rows;
   }
+
+  static async update(id, censoData) {
+    const query = `
+      UPDATE censados 
+      SET cedula = COALESCE($2, cedula),
+          primer_nombre = COALESCE($3, primer_nombre),
+          primer_apellido = COALESCE($4, primer_apellido),
+          telefono = COALESCE($5, telefono),
+          email = COALESCE($6, email),
+          direccion = COALESCE($7, direccion),
+          municipio = COALESCE($8, municipio),
+          latitud = COALESCE($9, latitud),
+          longitud = COALESCE($10, longitud),
+          miembros_familia = COALESCE($11, miembros_familia),
+          actualizado_en = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    const values = [
+      id,
+      censoData.cedula,
+      censoData.primer_nombre,
+      censoData.primer_apellido,
+      censoData.telefono,
+      censoData.email,
+      censoData.direccion,
+      censoData.municipio,
+      censoData.latitud,
+      censoData.longitud,
+      censoData.miembros_familia
+    ];
+
+    try {
+      const result = await global.db.query(query, values);
+      if (result.rows.length === 0) {
+        throw new Error('Beneficiario no encontrado');
+      }
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Error updating censado: ${error.message}`);
+    }
+  }
+
+  static async delete(id) {
+    const query = 'DELETE FROM censados WHERE id = $1 RETURNING *';
+    try {
+      const result = await global.db.query(query, [id]);
+      if (result.rows.length === 0) {
+        throw new Error('Beneficiario no encontrado');
+      }
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Error deleting censado: ${error.message}`);
+    }
+  }
 }
 
 // Modelo para Tipos de Ayuda
@@ -184,25 +239,32 @@ class AidDelivery {
 
   static async getByBeneficiary(censado_id) {
     const query = `
-      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido
+      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido, c.cedula, u.nombre as operator_name, i.ubicacion_almacen, c.municipio
       FROM entregas_ayuda ea
       JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       JOIN censados c ON ea.censado_id = c.id
+      LEFT JOIN usuarios u ON ea.operador_id = u.id
+      LEFT JOIN inventario i ON ea.tipo_ayuda_id = i.tipo_ayuda_id AND c.municipio = i.municipio
       WHERE ea.censado_id = $1
       ORDER BY ea.fecha_entrega DESC
     `;
+    
+    console.log('  [Model] ejecutando query con censado_id:', censado_id);
     const result = await global.db.query(query, [censado_id]);
+    console.log('  [Model] query completada, filas:', result.rows.length);
+    
     return result.rows;
   }
 
   static async getByMunicipality(municipio, dateFrom = null, dateTo = null) {
     let query = `
-      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido, u.nombre as operator_name
+      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido, c.cedula, u.nombre as operator_name, i.ubicacion_almacen, c.municipio
       FROM entregas_ayuda ea
       JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       JOIN censados c ON ea.censado_id = c.id
       JOIN usuarios u ON ea.operador_id = u.id
-      WHERE ea.municipio = $1
+      LEFT JOIN inventario i ON ea.tipo_ayuda_id = i.tipo_ayuda_id AND c.municipio = i.municipio
+      WHERE c.municipio = $1
     `;
     const values = [municipio];
     
@@ -223,15 +285,46 @@ class AidDelivery {
 
   static async getAll(limit = 100, offset = 0) {
     const query = `
-      SELECT ea.*, ta.nombre as aid_type_name, c.primer_nombre, c.primer_apellido
+      SELECT 
+        ea.id,
+        ea.fecha_entrega,
+        ea.cantidad as cantidad_entregada,
+        ea.numero_comprobante,
+        ta.nombre as aid_type_name,
+        c.primer_nombre,
+        c.primer_apellido,
+        c.cedula,
+        c.municipio as municipio_beneficiario,
+        u.nombre as operator_name,
+        i.municipio as municipio_almacen,
+        i.ubicacion_almacen,
+        i.cantidad as cantidad_disponible,
+        ea.notas
       FROM entregas_ayuda ea
       JOIN tipos_ayuda ta ON ea.tipo_ayuda_id = ta.id
       JOIN censados c ON ea.censado_id = c.id
+      JOIN usuarios u ON ea.operador_id = u.id
+      LEFT JOIN inventario i ON ea.tipo_ayuda_id = i.tipo_ayuda_id AND c.municipio = i.municipio
       ORDER BY ea.fecha_entrega DESC
       LIMIT $1 OFFSET $2
     `;
     const result = await global.db.query(query, [limit, offset]);
     return result.rows;
+  }
+
+  static async delete(id) {
+    const query = `
+      DELETE FROM entregas_ayuda
+      WHERE id = $1
+      RETURNING *
+    `;
+    const result = await global.db.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Entrega no encontrada');
+    }
+    
+    return result.rows[0];
   }
 }
 
@@ -291,6 +384,41 @@ class Inventory {
     
     const result = await global.db.query(createQuery, createValues);
     return { ...result.rows[0], isUpdate: false, message: 'Nuevo item de inventario creado' };
+  }
+
+  static async getByAidTypeAndMunicipality(tipo_ayuda_id, municipio) {
+    const query = `
+      SELECT i.* 
+      FROM inventario i
+      WHERE i.tipo_ayuda_id = $1 
+      AND i.municipio = $2
+      LIMIT 1
+    `;
+    console.log('  [Inventory Query]');
+    console.log('    tipo_ayuda_id:', tipo_ayuda_id);
+    console.log('    municipio:', municipio);
+    
+    const result = await global.db.query(query, [tipo_ayuda_id, municipio]);
+    
+    console.log('    Filas encontradas:', result.rows.length);
+    if (result.rows.length > 0) {
+      console.log('    ID:', result.rows[0].id);
+      console.log('    Cantidad:', result.rows[0].cantidad);
+      console.log('    Ubicación:', result.rows[0].ubicacion_almacen);
+    }
+    
+    return result.rows[0] || null;
+  }
+
+  static async decreaseQuantity(inventoryId, cantidadARestar) {
+    const query = `
+      UPDATE inventario
+      SET cantidad = cantidad - $2, actualizado_en = CURRENT_TIMESTAMP
+      WHERE id = $1 AND cantidad >= $2
+      RETURNING *
+    `;
+    const result = await global.db.query(query, [inventoryId, cantidadARestar]);
+    return result.rows[0] || null;
   }
 
   static async updateQuantity(inventoryId, cantidad) {

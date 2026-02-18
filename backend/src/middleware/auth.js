@@ -74,8 +74,8 @@ const checkDuplicateDelivery = async (req, res, next) => {
     if (result.rows.length > 0) {
       // Crear alerta de duplicidad
       const alertQuery = `
-        INSERT INTO alertas_duplicidad (id, censado_id, tipo_ayuda_id, ultima_entrega, dias_desde)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO alertas_duplicidad (id, censado_id, tipo_ayuda_id, ultima_entrega, dias_desde, estado_alerta)
+        VALUES ($1, $2, $3, $4, $5, $6)
       `;
       
       const daysSince = Math.floor((Date.now() - new Date(result.rows[0].fecha_entrega).getTime()) / (1000 * 60 * 60 * 24));
@@ -85,7 +85,8 @@ const checkDuplicateDelivery = async (req, res, next) => {
         censado_id,
         tipo_ayuda_id,
         result.rows[0].fecha_entrega,
-        daysSince
+        daysSince,
+        'pending'
       ]);
       
       res.locals.duplicateAlert = {

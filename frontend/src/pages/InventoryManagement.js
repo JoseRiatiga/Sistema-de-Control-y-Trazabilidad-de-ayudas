@@ -355,7 +355,7 @@ function InventoryManagement() {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-success">{editingId ? '✏️ Guardar cambios' : '➕ Agregar al Inventario'}</button>
+                <button type="submit" className="btn btn-success">{editingId ? 'Guardar cambios' : 'Agregar al Inventario'}</button>
                 <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>Cancelar</button>
               </div>
             </form>
@@ -404,14 +404,14 @@ function InventoryManagement() {
                             onClick={() => handleEditInventory(item)}
                             title="Editar inventario"
                           >
-                            ✏️ Editar
+                            Editar
                           </button>
                           <button
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDeleteInventory(item.id, item.aid_type_name, item.cantidad)}
                             title="Eliminar inventario"
                           >
-                            🗑️ Eliminar
+                            Eliminar
                           </button>
                         </td>
                       </tr>
