@@ -57,7 +57,12 @@ function AuditTrail() {
         { status: newStatus },
         { headers }
       );
-      fetchAuditData();
+      // Actualizar localmente sin recargar desde servidor
+      setAlertData(prevData =>
+        prevData.map(alert =>
+          alert.id === alertId ? { ...alert, estado_alerta: newStatus } : alert
+        )
+      );
     } catch (err) {
       console.error('Error updating alert:', err);
     }
@@ -136,25 +141,27 @@ function AuditTrail() {
                         <td>{alert.primer_nombre} {alert.primer_apellido || ''}</td>
                         <td>{alert.cedula || alert.identification}</td>
                         <td>{alert.aid_type_name}</td>
-                        <td>{new Date(alert.last_delivery_date || alert.ultima_entrega).toLocaleDateString()}</td>
-                        <td>{alert.days_since_last_delivery || alert.dias_desde}</td>
+                        <td>{alert.fecha_ultima_entrega ? new Date(alert.fecha_ultima_entrega).toLocaleDateString('es-ES') : 'N/A'}</td>
+                        <td>{alert.dias_desde_ultima_entrega || 0} días</td>
                         <td>
-                          <span className={`badge badge-${alert.alert_status}`}>
-                            {alert.alert_status}
+                          <span className={`badge badge-${alert.estado_alerta}`}>
+                            {alert.estado_alerta === 'pendiente' ? '⚠️ Pendiente' : 
+                             alert.estado_alerta === 'revisada' ? '👁️ Revisada' : 
+                             alert.estado_alerta === 'resuelta' ? '✅ Resuelta' : alert.estado_alerta}
                           </span>
                         </td>
                         <td>
-                          {alert.alert_status === 'pending' && (
+                          {alert.estado_alerta === 'pendiente' && (
                             <>
                               <button
                                 className="btn"
-                                onClick={() => updateAlertStatus(alert.id, 'reviewed')}
+                                onClick={() => updateAlertStatus(alert.id, 'revisada')}
                               >
                                 Revisar
                               </button>
                               <button
                                 className="btn"
-                                onClick={() => updateAlertStatus(alert.id, 'resolved')}
+                                onClick={() => updateAlertStatus(alert.id, 'resuelta')}
                               >
                                 Resolver
                               </button>
