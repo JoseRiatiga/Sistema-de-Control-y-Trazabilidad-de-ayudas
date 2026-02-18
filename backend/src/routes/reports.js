@@ -187,28 +187,9 @@ router.get('/control-entities', async (req, res) => {
       values.push(dateTo);
     }
     
-    query += ' GROUP BY ea.municipio, ta.nombre, u.nombre, ea.fecha_entrega::DATE ORDER BY ea.fecha_entrega DESC';
+    query += ' GROUP BY ea.municipio, ta.nombre, u.nombre, ea.fecha_entrega::DATE ORDER BY ea.fecha_entrega::DATE DESC';
     
     const result = await global.db.query(query, values);
-    
-    // Generar y guardar reporte
-    const reportId = uuidv4();
-    const reportQuery = `
-      INSERT INTO reportes (id, titulo, tipo_reporte, municipio, fecha_desde, fecha_hasta, generado_por, datos)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `;
-    
-    await global.db.query(reportQuery, [
-      reportId,
-      `Reporte para Entes de Control - ${municipality || 'Nacional'}`,
-      'auditoria',
-      municipality || null,
-      dateFrom || null,
-      dateTo || null,
-      req.userId,
-      JSON.stringify(result.rows)
-    ]);
-    
     res.json(result.rows);
   } catch (error) {
     console.error('Control entities report error:', error);

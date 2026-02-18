@@ -78,11 +78,21 @@ function Reports() {
 
   const downloadReport = async () => {
     try {
+      // Mapeo de tipos de reporte a nombres en español
+      const reportTypeNames = {
+        deliveries: 'Entregas',
+        inventory: 'Inventario',
+        beneficiaries: 'Beneficiarios',
+        'duplicate-alerts': 'Alertas de Duplicidad',
+        'control-entities': 'Entes de Control'
+      };
+
       // Mapeo de nombres de columnas a títulos profesionales
       const columnMapping = {
         municipio: 'Municipio',
         aid_type: 'Tipo de Ayuda',
         aid_type_name: 'Tipo de Ayuda',
+        nombre: 'Tipo de Ayuda',
         cantidad: 'Cantidad',
         costo_unitario: 'Costo Unitario',
         total_valor: 'Valor Total',
@@ -99,13 +109,35 @@ function Reports() {
         mes: 'Mes',
         año: 'Año',
         total_entregas: 'Total de Entregas',
+        total_deliveries: 'Total de Entregas',
         total_beneficiarios: 'Total de Beneficiarios',
-        dias_desde_ultima_entrega: 'Días Desde Última Entrega'
+        total_beneficiaries: 'Total de Beneficiarios',
+        dias_desde_ultima_entrega: 'Días Desde Última Entrega',
+        total_quantity: 'Cantidad Total',
+        cantidad_total: 'Cantidad Total',
+        beneficiaries: 'Beneficiarios',
+        assisted_beneficiaries: 'Beneficiarios Asistidos',
+        total_family_members: 'Total Miembros Familia',
+        total_alerts: 'Total Alertas',
+        pending: 'Pendientes',
+        reviewed: 'Revisadas',
+        resolved: 'Resueltas',
+        total_items: 'Total Items',
+        alerts_generated: 'Alertas Generadas',
+        id: 'ID',
+        email: 'Email',
+        creado_en: 'Creado En',
+        actualizado_en: 'Actualizado En',
+        estado: 'Estado',
+        estado_alerta: 'Estado Alerta',
+        notas: 'Notas',
+        censado_id: 'ID Beneficiario',
+        tipo_ayuda_id: 'ID Tipo de Ayuda'
       };
 
       // Obtener headers originales y mapearlos
       const originalHeaders = Object.keys(reportData[0] || {});
-      const displayHeaders = originalHeaders.map(h => columnMapping[h] || h);
+      const displayHeaders = originalHeaders.map(h => columnMapping[h] || translateColumnName(h));
 
       // Crear CSV con BOM para UTF-8 (para que Excel reconozca acentos)
       const header = '\uFEFF' + displayHeaders.map(h => `"${h}"`).join(',');
@@ -135,8 +167,11 @@ function Reports() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       
+      const reportName = reportTypeNames[reportType] || reportType;
+      const date = new Date().toISOString().split('T')[0];
+      
       link.setAttribute('href', url);
-      link.setAttribute('download', `Reporte_${reportType}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Reporte_${reportName}_${date}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
