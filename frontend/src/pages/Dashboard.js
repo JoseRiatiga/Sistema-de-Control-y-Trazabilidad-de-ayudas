@@ -307,25 +307,34 @@ function Dashboard() {
               <div className="chart-card">
                 <h2>Estado de Alertas</h2>
                 {alertsStats && Array.isArray(alertsStats) && alertsStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={alertsStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {alertsStats.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={alertsStats}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {alertsStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', flexWrap: 'wrap' }}>
+                      {alertsStats.map((item, index) => (
+                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '16px', height: '16px', backgroundColor: item.fill, borderRadius: '4px' }}></div>
+                          <span style={{ fontSize: '13px', fontWeight: '500' }}>{item.name}: {item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <p style={{ textAlign: 'center', color: '#999' }}>Cargando gráfica de alertas...</p>

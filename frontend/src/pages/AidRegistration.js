@@ -30,9 +30,13 @@ function AidRegistration() {
   const [censadosWithDeliveries, setCensadosWithDeliveries] = useState([]);
   const [inventoryStatus, setInventoryStatus] = useState(null); // Estado de disponibilidad de inventario
   const [checkingInventory, setCheckingInventory] = useState(false); // Indicador de carga
+  const [generatedReceipts, setGeneratedReceipts] = useState([]); // Comprobantes generados
+  const [beneficiarySigned, setBeneficiarySigned] = useState(false); // Si el beneficiario firmó
 
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
+  const getHeaders = () => {
+    const token = localStorage.getItem('token');
+    return { Authorization: `Bearer ${token}` };
+  };
 
   useEffect(() => {
     fetchData();
@@ -46,8 +50,8 @@ function AidRegistration() {
   const fetchData = async () => {
     try {
       const [censadosRes, aidTypesRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/censo', { headers }),
-        axios.get('http://localhost:5000/api/aids/types', { headers })
+        axios.get('http://localhost:5000/api/censo', { headers: getHeaders() }),
+        axios.get('http://localhost:5000/api/aids/types', { headers: getHeaders() })
       ]);
 
       setCensados(censadosRes.data);
@@ -63,7 +67,7 @@ function AidRegistration() {
 
   const fetchCensadosWithDeliveries = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/aids/delivery', { headers });
+      const response = await axios.get('http://localhost:5000/api/aids/delivery', { headers: getHeaders() });
       // Agrupar entregas por censado_id
       const deliveriesByCensado = {};
       response.data.forEach(delivery => {
@@ -136,7 +140,7 @@ function AidRegistration() {
       const url = `http://localhost:5000/api/aids/delivery/beneficiary/${censadoId}`;
       console.log('   URL:', url);
       
-      const response = await axios.get(url, { headers });
+      const response = await axios.get(url, { headers: getHeaders() });
       console.log('   Status:', response.status);
       console.log('   Datos recibidos:', response.data);
       console.log('   Total de entregas:', response.data?.length || 0);
@@ -209,7 +213,7 @@ function AidRegistration() {
       
       const response = await axios.get(
         `http://localhost:5000/api/aids/inventory-check/${aidTypeId}/${municipality}`,
-        { headers }
+        { headers: getHeaders() }
       );
       
       console.log('✓ Respuesta del servidor:', response.data);
@@ -238,8 +242,11 @@ function AidRegistration() {
     setMessage('');
     setError('');
     setDuplicateAlert(null);
+    setGeneratedReceipts([]);
 
     try {
+      const createdDeliveries = [];
+      
       // Registrar todos los items
       for (const item of aidItems) {
         const deliveryData = {
@@ -250,14 +257,44 @@ function AidRegistration() {
           notas: formData.notas
         };
 
-        await axios.post(
+        const deliveryResponse = await axios.post(
           'http://localhost:5000/api/aids/delivery',
           deliveryData,
-          { headers }
+          { headers: getHeaders() }
         );
+
+        createdDeliveries.push(deliveryResponse.data.delivery);
       }
 
-      setMessage(`✓ ${aidItems.length} ayuda(s) registrada(s) exitosamente`);
+      // Generar comprobantes para cada entrega
+      const receipts = [];
+
+      for (const delivery of createdDeliveries) {
+        try {
+          const receiptResponse = await axios.post(
+            `http://localhost:5000/api/receipts/${delivery.id}`,
+            { 
+              signedByBeneficiary: beneficiarySigned 
+            },
+            { headers: getHeaders() }
+          );
+
+          receipts.push({
+            deliveryId: delivery.id,
+            receiptId: receiptResponse.data.id,
+            receiptNumber: receiptResponse.data.receipt_number,
+            hash: receiptResponse.data.hash
+          });
+        } catch (err) {
+          console.error(`Error generando comprobante para entrega ${delivery.id}:`, err);
+        }
+      }
+
+      setGeneratedReceipts(receipts);
+
+      setMessage(
+        `✓ ${aidItems.length} ayuda(s) registrada(s) exitosamente - ${receipts.length} comprobante(s) generado(s)`
+      );
       
       // Limpiar todo
       setFormData({
@@ -268,8 +305,9 @@ function AidRegistration() {
         notas: ''
       });
       setAidItems([]);
+      setBeneficiarySigned(false);
 
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al registrar ayudas');
     } finally {
@@ -316,7 +354,7 @@ function AidRegistration() {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/aids/delivery/${deliveryId}`, { headers });
+      await axios.delete(`http://localhost:5000/api/aids/delivery/${deliveryId}`, { headers: getHeaders() });
       setMessage('✓ Entrega eliminada correctamente');
       // Recargar las entregas del beneficiario
       if (formData.censado_id) {
@@ -324,7 +362,38 @@ function AidRegistration() {
       }
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setError('Error al eliminar la entrega: ' + (err.response?.data?.error || err.message));
+      const errorMessage = err.response?.data?.error || err.message;
+      
+      // Mostrar un mensaje específico para comprobantes
+      if (err.response?.data?.hasReceipts) {
+        setError('❌ No se puede eliminar: Esta entrega tiene comprobantes generados. Los registros con comprobantes están protegidos por auditoría.');
+      } else {
+        setError('Error al eliminar la entrega: ' + errorMessage);
+      }
+    }
+  };
+
+  const downloadReceipt = async (receiptId, receiptNumber) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/receipts/${receiptId}/download`,
+        {
+          headers: getHeaders(),
+          responseType: 'blob'
+        }
+      );
+
+      // Crear un blob URL y descargar
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${receiptNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Error descargando comprobante: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -509,7 +578,7 @@ function AidRegistration() {
 
                 {/* Tabla de entregas ya registradas */}
                 {formData.censado_id && (
-                  <div style={{ marginBottom: '20px', border: '1px solid #ddd', padding: '15px', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
+                  <div className="registered-deliveries-section">
                     <h3>Entregas Registradas para este Beneficiario</h3>
                     {registeredDeliveries.length > 0 ? (
                       <table className="table">
@@ -543,7 +612,7 @@ function AidRegistration() {
                         </tbody>
                       </table>
                     ) : (
-                      <div style={{ padding: '15px', textAlign: 'center', color: '#7f8c8d' }}>
+                      <div className="registered-deliveries-empty">
                         <p>✓ No hay entregas registradas para este beneficiario</p>
                         <small>Una vez registres ayudas, aparecerán aquí para que puedas consultarlas o eliminarlas</small>
                       </div>
@@ -578,6 +647,19 @@ function AidRegistration() {
                   ></textarea>
                 </div>
 
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <input
+                    type="checkbox"
+                    id="beneficiary_signed"
+                    checked={beneficiarySigned}
+                    onChange={(e) => setBeneficiarySigned(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="beneficiary_signed" style={{ margin: 0, cursor: 'pointer', userSelect: 'none' }}>
+                    El beneficiario firmó el comprobante
+                  </label>
+                </div>
+
                 <button 
                   type="submit" 
                   className="btn btn-primary" 
@@ -590,6 +672,58 @@ function AidRegistration() {
           </div>
         )}
       </div>
+
+      {/* Sección de Comprobantes Generados */}
+      {generatedReceipts.length > 0 && (
+        <div style={{
+          backgroundColor: 'rgba(40, 167, 69, 0.1)',
+          border: '2px solid #28a745',
+          borderRadius: '8px',
+          padding: '20px',
+          marginTop: '30px'
+        }}>
+          <h2 style={{ color: '#155724', marginTop: 0 }}>✓ Comprobantes Generados</h2>
+          <p style={{ color: '#155724', marginBottom: '20px' }}>
+            Se han generado {generatedReceipts.length} comprobante(s) digital(es) para las entregas registradas:
+          </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '15px'
+          }}>
+            {generatedReceipts.map((receipt, index) => (
+              <div key={index} style={{
+                backgroundColor: 'white',
+                border: '1px solid #28a745',
+                borderRadius: '6px',
+                padding: '15px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#155724' }}>
+                  Comprobante #{index + 1}
+                </h4>
+                <p style={{ margin: '8px 0', fontSize: '13px' }}>
+                  <strong>Número:</strong> {receipt.receiptNumber}
+                </p>
+                <p style={{ margin: '8px 0', fontSize: '13px' }}>
+                  <strong>ID Entrega:</strong> {receipt.deliveryId}
+                </p>
+                <p style={{ margin: '8px 0', fontSize: '12px', color: '#7f8c8d' }}>
+                  <strong>Hash:</strong> {receipt.hash.substring(0, 16)}...
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => downloadReceipt(receipt.receiptId, receipt.receiptNumber)}
+                  style={{ marginTop: '12px', width: '100%' }}
+                >
+                  📥 Descargar PDF
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

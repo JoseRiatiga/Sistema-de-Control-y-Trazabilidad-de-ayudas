@@ -578,15 +578,56 @@ class AidDeliveryController {
     try {
       const { AidDelivery } = require('../models');
       const { auditLog } = require('../middleware/auth');
+      const fs = require('fs');
+      const path = require('path');
       
+      // Obtener información de la entrega antes de eliminarla
+      const deliveryQuery = `SELECT * FROM entregas_ayuda WHERE id = $1`;
+      const deliveryResult = await global.db.query(deliveryQuery, [req.params.id]);
+      
+      if (deliveryResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Entrega no encontrada' });
+      }
+
+      const delivery = deliveryResult.rows[0];
+      
+      // Obtener y eliminar comprobantes asociados
+      const getReceiptsQuery = `
+        SELECT id FROM comprobantes_entrega 
+        WHERE entrega_id = $1
+      `;
+      const receiptsResult = await global.db.query(getReceiptsQuery, [req.params.id]);
+      
+      // Eliminar comprobantes y sus PDFs
+      for (const receipt of receiptsResult.rows) {
+        // Eliminar archivo PDF si existe
+        const receiptDir = path.join(__dirname, '../../receipts');
+        const pdfPath = path.join(receiptDir, `${receipt.id}.pdf`);
+        
+        if (fs.existsSync(pdfPath)) {
+          try {
+            fs.unlinkSync(pdfPath);
+            console.log(`PDF eliminado: ${pdfPath}`);
+          } catch (fileErr) {
+            console.warn(`No se pudo eliminar PDF: ${pdfPath}`, fileErr.message);
+          }
+        }
+        
+        // Eliminar registro de comprobante
+        const deleteReceiptQuery = `DELETE FROM comprobantes_entrega WHERE id = $1`;
+        await global.db.query(deleteReceiptQuery, [receipt.id]);
+      }
+      
+      // Eliminar la entrega
       const deleted = await AidDelivery.delete(req.params.id);
       
       // Registrar en auditoría
       await auditLog('ELIMINAR', 'entregas_ayuda', req.params.id, deleted, null);
       
       return res.json({ 
-        message: 'Entrega eliminada correctamente',
-        delivery: deleted 
+        message: 'Entrega, comprobantes y PDF eliminados correctamente',
+        delivery: deleted,
+        receiptsDeleted: receiptsResult.rows.length
       });
     } catch (error) {
       console.error('Delete delivery error:', error);

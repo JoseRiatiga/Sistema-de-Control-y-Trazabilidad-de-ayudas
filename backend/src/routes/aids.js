@@ -18,6 +18,6 @@ router.post('/delivery', verifyRole(['administrador', 'operador']), checkDuplica
 router.get('/delivery', AidDeliveryController.getAll);
 router.get('/delivery/beneficiary/:censado_id', AidDeliveryController.getByBeneficiary);
 router.get('/delivery/municipality/:municipality', AidDeliveryController.getByMunicipality);
-router.delete('/delivery/:id', verifyRole(['administrador', 'operador']), AidDeliveryController.delete);
+router.delete('/delivery/:id', verifyRole(['administrador']), AidDeliveryController.delete);
 
 module.exports = router;

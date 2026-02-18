@@ -78,21 +78,70 @@ function Reports() {
 
   const downloadReport = async () => {
     try {
-      // Crear CSV
-      const headers_csv = Object.keys(reportData[0] || {});
-      const csv = [
-        headers_csv.join(','),
-        ...reportData.map(row => 
-          headers_csv.map(header => JSON.stringify(row[header] || '')).join(',')
-        )
-      ].join('\n');
+      // Mapeo de nombres de columnas a títulos profesionales
+      const columnMapping = {
+        municipio: 'Municipio',
+        aid_type: 'Tipo de Ayuda',
+        aid_type_name: 'Tipo de Ayuda',
+        cantidad: 'Cantidad',
+        costo_unitario: 'Costo Unitario',
+        total_valor: 'Valor Total',
+        total_value: 'Valor Total',
+        primer_nombre: 'Primer Nombre',
+        primer_apellido: 'Primer Apellido',
+        cedula: 'Cédula',
+        identification: 'Cédula',
+        fecha_entrega: 'Fecha de Entrega',
+        delivery_date: 'Fecha de Entrega',
+        operator_name: 'Operador',
+        operador_id: 'Operador',
+        dia: 'Día',
+        mes: 'Mes',
+        año: 'Año',
+        total_entregas: 'Total de Entregas',
+        total_beneficiarios: 'Total de Beneficiarios',
+        dias_desde_ultima_entrega: 'Días Desde Última Entrega'
+      };
 
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `reporte_${reportType}_${new Date().toISOString()}.csv`;
-      a.click();
+      // Obtener headers originales y mapearlos
+      const originalHeaders = Object.keys(reportData[0] || {});
+      const displayHeaders = originalHeaders.map(h => columnMapping[h] || h);
+
+      // Crear CSV con BOM para UTF-8 (para que Excel reconozca acentos)
+      const header = '\uFEFF' + displayHeaders.map(h => `"${h}"`).join(',');
+      
+      const rows = reportData.map(row =>
+        originalHeaders.map(header => {
+          let value = row[header] || '';
+          
+          // Formatear fechas
+          if ((header.includes('fecha') || header.includes('date')) && value) {
+            value = new Date(value).toLocaleDateString('es-ES');
+          }
+          
+          // Formatear números con decimales
+          if ((header.includes('costo') || header.includes('valor') || header.includes('total')) && !isNaN(value) && value !== '') {
+            value = parseFloat(value).toFixed(2);
+          }
+          
+          return `"${value}"`;
+        }).join(',')
+      );
+
+      const csv = [header, ...rows].join('\n');
+
+      // Crear blob con encoding UTF-8
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Reporte_${reportType}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (err) {
       console.error('Error descargando reporte:', err);
     }

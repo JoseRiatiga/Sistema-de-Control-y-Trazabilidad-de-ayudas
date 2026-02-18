@@ -262,9 +262,10 @@ function InventoryManagement() {
           <button 
             className="btn btn-primary"
             onClick={() => setShowForm(!showForm)}
+            style={{ display: showForm ? 'none' : 'block' }}
             type="button"
           >
-            {showForm ? 'Cancelar' : '+ Agregar Inventario'}
+            + Agregar Inventario
           </button>
         </div>
 

@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
+import { AuthContext } from '../App';
 import AlertEditModal from './AlertEditModal';
+import AlertViewModal from './AlertViewModal';
 import './AuditTrail.css';
 
 function AuditTrail() {
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.rol === 'administrador';
+
   const [auditData, setAuditData] = useState([]);
   const [alertData, setAlertData] = useState([]);
   const [activeTab, setActiveTab] = useState('alerts');
@@ -15,9 +20,19 @@ function AuditTrail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [modalAction, setModalAction] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewedAlert, setViewedAlert] = useState(null);
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 AuditTrail Debug:');
+    console.log('  user:', user);
+    console.log('  user?.rol:', user?.rol);
+    console.log('  isAdmin:', isAdmin);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     fetchAuditData();
@@ -67,6 +82,16 @@ function AuditTrail() {
     setModalAction(null);
   };
 
+  const openViewModal = (alert) => {
+    setViewedAlert(alert);
+    setViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setViewModalOpen(false);
+    setViewedAlert(null);
+  };
+
   const updateAlertStatus = async (razon, notas) => {
     try {
       const response = await axios.patch(
@@ -79,7 +104,6 @@ function AuditTrail() {
         { headers }
       );
       
-      // Actualizar localmente
       setAlertData(prevData =>
         prevData.map(alert =>
           alert.id === selectedAlert.id 
@@ -88,7 +112,6 @@ function AuditTrail() {
         )
       );
       
-      // Mostrar mensaje de éxito
       setSuccessMessage(response.data.message);
       setTimeout(() => setSuccessMessage(''), 5000);
       
@@ -96,6 +119,69 @@ function AuditTrail() {
     } catch (err) {
       console.error('Error updating alert:', err);
       setError(err.response?.data?.error || 'Error al actualizar la alerta');
+    }
+  };
+
+  const downloadReceiptPDF = async (deliveryId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/receipts/download/delivery/${deliveryId}`,
+        {
+          headers,
+          responseType: 'blob'
+        }
+      );
+
+      // Crear un blob URL y descargar
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `comprobante_entrega_${deliveryId.substring(0, 8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error descargando PDF:', err);
+      setError('No se pudo descargar el comprobante. Verifique que exista.');
+    }
+  };
+
+  const deleteDeliveryRecord = async (deliveryId) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este registro de entrega? Esto incluye su comprobante PDF.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `http://localhost:5000/api/aids/delivery/${deliveryId}`,
+        { headers }
+      );
+      setSuccessMessage('✓ Registro de entrega y comprobante eliminados correctamente');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchAuditData();
+    } catch (err) {
+      console.error('Error eliminando entrega:', err);
+      setError('Error al eliminar: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const deleteAlert = async (alertId) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta alerta de duplicidad? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `http://localhost:5000/api/audit/duplicate-alerts/${alertId}`,
+        { headers }
+      );
+      setSuccessMessage('✓ Alerta de duplicidad eliminada correctamente');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchAuditData();
+    } catch (err) {
+      console.error('Error eliminando alerta:', err);
+      setError('Error al eliminar: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -200,12 +286,50 @@ function AuditTrail() {
                             </>
                           )}
                           {alert.estado_alerta === 'revisada' && (
-                            <button
-                              className="btn btn-success"
-                              onClick={() => openModal(alert, 'resuelta')}
-                            >
-                              Resolver
-                            </button>
+                            <>
+                              <button
+                                className="btn btn-success"
+                                onClick={() => openModal(alert, 'resuelta')}
+                              >
+                                Resolver
+                              </button>
+                              <button
+                                className="btn btn-info"
+                                onClick={() => openViewModal(alert)}
+                                title="Ver detalles y opciones registradas"
+                              >
+                                ℹ️ Detalles
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  className="btn btn-small btn-danger"
+                                  onClick={() => deleteAlert(alert.id)}
+                                  title="Eliminar esta alerta de duplicidad"
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {alert.estado_alerta === 'resuelta' && (
+                            <>
+                              <button
+                                className="btn btn-info"
+                                onClick={() => openViewModal(alert)}
+                                title="Ver detalles y opciones registradas"
+                              >
+                                ℹ️ Detalles
+                              </button>
+                              {isAdmin && (
+                                <button
+                                  className="btn btn-small btn-danger"
+                                  onClick={() => deleteAlert(alert.id)}
+                                  title="Eliminar esta alerta de duplicidad"
+                                >
+                                  🗑️ Eliminar
+                                </button>
+                              )}
+                            </>
                           )}
                         </td>
                       </tr>
@@ -231,6 +355,8 @@ function AuditTrail() {
                       <th>Cantidad</th>
                       <th>Operador</th>
                       <th>Municipio</th>
+                      <th>Descargar</th>
+                      {isAdmin && <th>Eliminar</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -242,6 +368,26 @@ function AuditTrail() {
                         <td>{entry.cantidad || entry.quantity}</td>
                         <td>{entry.operator_name}</td>
                         <td>{entry.municipio || entry.municipality}</td>
+                        <td>
+                          <button
+                            className="btn btn-small"
+                            onClick={() => downloadReceiptPDF(entry.id)}
+                            title="Descargar comprobante PDF"
+                          >
+                            📄 PDF
+                          </button>
+                        </td>
+                        {isAdmin && (
+                          <td>
+                            <button
+                              className="btn btn-small btn-danger"
+                              onClick={() => deleteDeliveryRecord(entry.id)}
+                              title="Eliminar registro de entrega"
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -290,6 +436,13 @@ function AuditTrail() {
           action={modalAction}
           onClose={closeModal}
           onConfirm={updateAlertStatus}
+        />
+      )}
+
+      {viewModalOpen && viewedAlert && (
+        <AlertViewModal
+          alert={viewedAlert}
+          onClose={closeViewModal}
         />
       )}
     </div>

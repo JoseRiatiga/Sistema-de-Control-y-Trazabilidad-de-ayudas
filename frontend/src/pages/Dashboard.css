@@ -125,7 +125,7 @@
 
 .stat-card h3 {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: #ffffff !important;
   margin-bottom: 16px;
   text-transform: uppercase;
   font-weight: 700;
@@ -137,6 +137,10 @@
   font-weight: 700;
   color: var(--primary);
   margin-bottom: 8px;
+}
+
+[data-theme="light"] .stat-value {
+  color: #3b82f6;
 }
 
 .stat-card.success-card .stat-value {
@@ -226,7 +230,7 @@
 }
 
 .card h2 {
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
   font-size: 20px;
   margin-bottom: 24px;
   font-weight: 700;
@@ -241,7 +245,6 @@
 
 .table thead {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
 }
 
 .table thead th {
@@ -251,6 +254,14 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+[data-theme="light"] .table thead th {
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .table thead th {
+  color: #ffffff !important;
 }
 
 .table tbody td {

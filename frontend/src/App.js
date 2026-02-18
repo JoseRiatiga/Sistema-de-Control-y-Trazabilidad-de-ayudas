@@ -40,6 +40,7 @@ function App() {
   const handleLogin = (token, userData) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('userRole', userData.rol);
     setToken(token);
     setIsAuthenticated(true);
     setUser(userData);
@@ -48,6 +49,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('userRole'); // Eliminar el rol
     setToken(null);
     setIsAuthenticated(false);
     setUser(null);

@@ -3,19 +3,28 @@ const { v4: uuidv4 } = require('uuid');
 
 // Middleware para verificar JWT
 const verifyToken = (req, res, next) => {
+  console.log('\n🔐 Verificando token...');
+  console.log('   Headers recibidos:', Object.keys(req.headers));
+  console.log('   Authorization header:', req.headers.authorization);
+  
   const token = req.headers.authorization?.split(' ')[1];
   
   if (!token) {
+    console.log('   ❌ Token no proporcionado');
     return res.status(401).json({ error: 'Token no proporcionado' });
   }
+  
+  console.log('   ✓ Token encontrado:', token.substring(0, 20) + '...');
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
     // Accept both 'role' (English) and 'rol' (Spanish) from JWT
     req.userRole = decoded.role || decoded.rol;
+    console.log('   ✓ Token verificado. User ID:', req.userId);
     next();
   } catch (error) {
+    console.log('   ❌ Token inválido:', error.message);
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
