@@ -1,10 +1,29 @@
-import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useContext, useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import './NavBar.css';
 
 function NavBar({ onLogout }) {
-  const { user } = useContext(AuthContext);
+  const { user, theme, handleThemeChange } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Cerrar dropdown cuando se hace clic fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    onLogout();
+  };
 
   return (
     <nav className="navbar">
@@ -32,11 +51,63 @@ function NavBar({ onLogout }) {
         {user.rol === 'administrador' && (
           <Link to="/usuarios">Gestión de Usuarios</Link>
         )}
-        <div className="user-info">
-          <span>{user.nombre} ({user.rol})</span>
-          <button className="btn btn-logout" onClick={onLogout}>
-            Cerrar Sesión
+        
+        {/* User Dropdown */}
+        <div className="user-dropdown" ref={dropdownRef}>
+          <button 
+            className="user-dropdown-btn"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            title={`${user.nombre} (${user.rol})`}
+          >
+            <span className="user-avatar">{user.nombre?.charAt(0).toUpperCase()}</span>
+            <span className="user-name">{user.nombre}</span>
           </button>
+
+          {dropdownOpen && (
+            <div className="dropdown-menu">
+              <div className="dropdown-header">
+                <div className="dropdown-user-info">
+                  <span className="dropdown-avatar">{user.nombre?.charAt(0).toUpperCase()}</span>
+                  <div>
+                    <p className="dropdown-username">{user.nombre}</p>
+                    <p className="dropdown-role">{user.rol}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="dropdown-divider"></div>
+              <button 
+                className="dropdown-item"
+                onClick={() => {
+                  navigate('/configuracion');
+                  setDropdownOpen(false);
+                }}
+              >
+                ⚙️ Configuración
+              </button>
+              <div className="dropdown-divider"></div>
+
+              {/* Theme Toggle */}
+              <div className="dropdown-item theme-toggle">
+                <span className="theme-label">🎨 Tema</span>
+                <button 
+                  className={`theme-switch ${theme === 'dark' ? 'dark' : 'light'}`}
+                  onClick={() => handleThemeChange(theme === 'light' ? 'dark' : 'light')}
+                  title={`Cambiar a tema ${theme === 'light' ? 'oscuro' : 'claro'}`}
+                  aria-label="Toggle theme"
+                >
+                  <span className="theme-icon">{theme === 'light' ? '☀️' : '🌙'}</span>
+                </button>
+              </div>
+              <div className="dropdown-divider"></div>
+
+              <button 
+                className="dropdown-item logout-btn"
+                onClick={handleLogout}
+              >
+                🚪 Cerrar Sesión
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </nav>
