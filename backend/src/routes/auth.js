@@ -13,6 +13,13 @@ router.use(verifyToken, setCurrentUser);
 router.get('/profile', AuthController.getProfile);
 router.get('/users', AuthController.getAllUsers);
 
+// Actualizar perfil del usuario actual
+router.put('/perfil/actualizar', AuthController.updateProfile);
+router.put('/perfil/cambiar-password', AuthController.changePassword);
+router.get('/perfil/sesiones', AuthController.getSessions);
+router.get('/perfil/estadisticas', AuthController.getStatistics);
+router.post('/perfil/solicitar-eliminacion', AuthController.requestDeletion);
+
 // Crear usuario (solo administrador)
 router.post('/create-user', verifyRole(['administrador']), AuthController.register);
 

@@ -12,6 +12,7 @@ import BeneficiaryManagement from './pages/BeneficiaryManagement';
 import Reports from './pages/Reports';
 import AuditTrail from './pages/AuditTrail';
 import UserManagement from './pages/UserManagement';
+import Settings from './pages/Settings';
 import NavBar from './components/NavBar';
 
 // Contexto para autenticación
@@ -21,6 +22,12 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+
+  // Aplicar tema al cargar la página
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     if (token) {
@@ -46,8 +53,14 @@ function App() {
     setUser(null);
   };
 
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, token }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, token, theme, handleThemeChange }}>
       <Router>
         {isAuthenticated && <NavBar onLogout={handleLogout} />}
         <Routes>
@@ -86,6 +99,10 @@ function App() {
           <Route
             path="/usuarios"
             element={isAuthenticated && user.rol === 'administrador' ? <UserManagement /> : <Navigate to="/inicio" />}
+          />
+          <Route
+            path="/configuracion"
+            element={isAuthenticated ? <Settings /> : <Navigate to="/ingreso" />}
           />
           <Route path="/" element={<Navigate to={isAuthenticated ? '/inicio' : '/ingreso'} />} />
         </Routes>

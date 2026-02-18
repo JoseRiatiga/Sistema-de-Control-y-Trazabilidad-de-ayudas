@@ -66,6 +66,63 @@ class User {
     
     return result.rows[0];
   }
+
+  static async update(id, userData) {
+    const updates = [];
+    const values = [id];
+    let paramCount = 2;
+
+    if (userData.nombre !== undefined) {
+      updates.push(`nombre = $${paramCount}`);
+      values.push(userData.nombre);
+      paramCount++;
+    }
+
+    if (userData.email !== undefined) {
+      updates.push(`email = $${paramCount}`);
+      values.push(userData.email);
+      paramCount++;
+    }
+
+    if (userData.telefono !== undefined) {
+      updates.push(`telefono = $${paramCount}`);
+      values.push(userData.telefono);
+      paramCount++;
+    }
+
+    if (userData.direccion !== undefined) {
+      updates.push(`direccion = $${paramCount}`);
+      values.push(userData.direccion);
+      paramCount++;
+    }
+
+    if (userData.contraseña_hash !== undefined) {
+      updates.push(`contraseña_hash = $${paramCount}`);
+      values.push(userData.contraseña_hash);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      throw new Error('No hay datos para actualizar');
+    }
+
+    updates.push('actualizado_en = CURRENT_TIMESTAMP');
+
+    const query = `
+      UPDATE usuarios
+      SET ${updates.join(', ')}
+      WHERE id = $1 AND activo = true
+      RETURNING id, nombre, email, rol, telefono, direccion, municipio
+    `;
+
+    const result = await global.db.query(query, values);
+
+    if (result.rows.length === 0) {
+      throw new Error('Usuario no encontrado');
+    }
+
+    return result.rows[0];
+  }
 }
 
 // Modelo para Censados (Beneficiarios)

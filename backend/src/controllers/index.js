@@ -132,6 +132,152 @@ class AuthController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  static async updateProfile(req, res) {
+    try {
+      const { nombre, telefono, direccion } = req.body;
+      const userId = req.userId;
+
+      // Validar que al menos un campo esté presente
+      if (!nombre && !telefono && !direccion) {
+        return res.status(400).json({ error: 'Debe proporcionar al menos un campo para actualizar' });
+      }
+
+      // Preparar datos para actualizar
+      const updateData = {};
+      if (nombre) updateData.nombre = nombre;
+      if (telefono) updateData.telefono = telefono;
+      if (direccion) updateData.direccion = direccion;
+
+      // Actualizar usuario
+      const updatedUser = await User.update(userId, updateData);
+
+      return res.json({
+        mensaje: 'Perfil actualizado correctamente',
+        user: {
+          id: updatedUser.id,
+          nombre: updatedUser.nombre,
+          email: updatedUser.email,
+          rol: updatedUser.rol,
+          telefono: updatedUser.telefono,
+          direccion: updatedUser.direccion
+        }
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async changePassword(req, res) {
+    try {
+      const { passwordActual, passwordNueva } = req.body;
+      const userId = req.userId;
+
+      // Validar campos requeridos
+      if (!passwordActual || !passwordNueva) {
+        return res.status(400).json({ error: 'Contraseña actual y nueva requeridas' });
+      }
+
+      // Validar longitud mínima
+      if (passwordNueva.length < 6) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+      }
+
+      // Obtener usuario actual
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Verificar contraseña actual
+      const passwordMatch = (passwordActual === user.contraseña_hash);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+      }
+
+      // Actualizar contraseña
+      await User.update(userId, { contraseña_hash: passwordNueva });
+
+      return res.json({
+        mensaje: 'Contraseña cambiada correctamente'
+      });
+    } catch (error) {
+      console.error('Change password error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async getSessions(req, res) {
+    try {
+      const userId = req.userId;
+      // Para este proyecto, devolvemos sesiones simuladas
+      // En producción, esto vendría de una tabla de sesiones en BD
+      const sessions = [
+        {
+          dispositivo: 'web',
+          ubicacion: 'Navegador - Sistema Ayudas',
+          ultimoAcceso: new Date(),
+          actual: true
+        }
+      ];
+      return res.json(sessions);
+    } catch (error) {
+      console.error('Get sessions error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async getStatistics(req, res) {
+    try {
+      const userId = req.userId;
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Calcular días activo
+      const diasActivo = user.creado_en ? 
+        Math.floor((new Date() - new Date(user.creado_en)) / (1000 * 60 * 60 * 24)) : 0;
+
+      const stats = {
+        diasActivo,
+        // Las siguientes estadísticas se pueden poblaren análisis reales desde BD
+        ayudasRegistradas: 0,
+        beneficiariosRegistrados: 0,
+        auditoriasRealizadas: 0,
+        usuariosCreados: 0,
+        ayudasTotales: 0
+      };
+
+      return res.json(stats);
+    } catch (error) {
+      console.error('Get statistics error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async requestDeletion(req, res) {
+    try {
+      const userId = req.userId;
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Marcar usuario para eliminación (soft delete)
+      await User.update(userId, { activo: false });
+
+      return res.json({
+        mensaje: 'Solicitud de eliminación de cuenta procesada. Tu cuenta ha sido desactivada.'
+      });
+    } catch (error) {
+      console.error('Request deletion error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 // Controlador de Censo (Beneficiarios)
