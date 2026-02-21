@@ -44,16 +44,32 @@ router.get('/duplicate-alerts', async (req, res) => {
 });
 
 // Obtener bitácora de entregas
+// Agrupa múltiples entregas del mismo beneficiario en el mismo día como "Multiple"
 router.get('/delivery-log', async (req, res) => {
   try {
     const { municipality, dateFrom, dateTo } = req.query;
+    
+    // Subquery para obtener todas las entregas con conteo por día
     let query = `
-      SELECT ea.*, c.primer_nombre, c.primer_apellido, u.nombre as operator_name, at.nombre as aid_type_name
-      FROM entregas_ayuda ea
-      JOIN censados c ON ea.censado_id = c.id
-      JOIN usuarios u ON ea.operador_id = u.id
-      JOIN tipos_ayuda at ON ea.tipo_ayuda_id = at.id
-      WHERE 1=1
+      WITH entregas_con_conteo AS (
+        SELECT 
+          ea.*,
+          c.primer_nombre, 
+          c.primer_apellido, 
+          u.nombre as operator_name, 
+          at.nombre as aid_type_name,
+          COUNT(*) OVER (
+            PARTITION BY ea.censado_id, DATE(ea.fecha_entrega)
+          ) as entregas_del_dia,
+          ROW_NUMBER() OVER (
+            PARTITION BY ea.censado_id, DATE(ea.fecha_entrega)
+            ORDER BY ea.fecha_entrega ASC
+          ) as fila_numero
+        FROM entregas_ayuda ea
+        JOIN censados c ON ea.censado_id = c.id
+        JOIN usuarios u ON ea.operador_id = u.id
+        JOIN tipos_ayuda at ON ea.tipo_ayuda_id = at.id
+        WHERE 1=1
     `;
     const values = [];
     
@@ -72,9 +88,25 @@ router.get('/delivery-log', async (req, res) => {
       values.push(dateTo);
     }
     
-    query += ' ORDER BY ea.fecha_entrega DESC';
+    // Terminar la subquery y seleccionar solo la primera entrega de cada grupo
+    query += `
+      )
+      SELECT *
+      FROM entregas_con_conteo
+      WHERE fila_numero = 1
+      ORDER BY fecha_entrega DESC
+    `;
+    
     const result = await global.db.query(query, values);
-    res.json(result.rows);
+    
+    // Procesar resultados para cambiar aid_type_name a "Multiple" cuando sea necesario
+    const processedRows = result.rows.map(row => ({
+      ...row,
+      aid_type_name: row.entregas_del_dia > 1 ? 'Multiple' : row.aid_type_name,
+      cantidad: row.entregas_del_dia > 1 ? row.entregas_del_dia : row.cantidad
+    }));
+    
+    res.json(processedRows);
   } catch (error) {
     console.error('Get delivery log error:', error);
     res.status(500).json({ error: error.message });
