@@ -134,7 +134,8 @@ function AuditTrail() {
       closeModal();
     } catch (err) {
       console.error('Error updating alert:', err);
-      setError(err.response?.data?.error || 'Error al actualizar la alerta');
+      console.error('Error details:', err.response?.data);
+      setError(err.response?.data?.error || 'Error al actualizar la alerta: ' + err.message);
     }
   };
 

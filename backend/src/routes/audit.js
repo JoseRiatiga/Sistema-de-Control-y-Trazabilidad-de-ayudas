@@ -183,4 +183,81 @@ router.delete('/duplicate-alerts/:id', verifyRole(['administrador']), async (req
   }
 });
 
+// Actualizar estado de alerta de duplicidad
+router.patch('/duplicate-alerts/:id', verifyRole(['administrador', 'auditor']), async (req, res) => {
+  try {
+    const alertId = req.params.id;
+    const { status, razon, notas } = req.body;
+    const userId = req.userId;
+
+    console.log('📝 [PATCH /duplicate-alerts/:id] Actualizando alerta:');
+    console.log('   Alert ID:', alertId);
+    console.log('   Status:', status);
+    console.log('   User ID:', userId);
+
+    // Validar que el estado sea válido
+    const validStates = ['pendiente', 'revisada', 'resuelta'];
+    if (!validStates.includes(status)) {
+      return res.status(400).json({ error: `Estado inválido. Debe ser uno de: ${validStates.join(', ')}` });
+    }
+
+    // Obtener la alerta actual para la bitácora
+    const getAlertQuery = `SELECT * FROM alertas_duplicidad WHERE id = $1`;
+    const alertResult = await global.db.query(getAlertQuery, [alertId]);
+    
+    if (alertResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Alerta no encontrada' });
+    }
+
+    const oldAlert = alertResult.rows[0];
+
+    // Actualizar la alerta
+    const updateQuery = `
+      UPDATE alertas_duplicidad 
+      SET estado_alerta = $1, 
+          revisada_por = $2, 
+          revisada_en = CURRENT_TIMESTAMP,
+          razon_resolucion = $3,
+          notas = $4
+      WHERE id = $5
+      RETURNING *
+    `;
+    
+    const updateResult = await global.db.query(updateQuery, [
+      status,
+      userId,
+      razon || null,
+      notas || null,
+      alertId
+    ]);
+
+    const updatedAlert = updateResult.rows[0];
+
+    console.log('   ✓ Alerta actualizada correctamente');
+
+    // Registrar en bitácora de auditoría
+    const auditQuery = `
+      INSERT INTO bitacora_auditoria (accion, nombre_tabla, id_registro, usuario_id, valores_antiguos, valores_nuevos)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `;
+    
+    await global.db.query(auditQuery, [
+      'UPDATE',
+      'alertas_duplicidad',
+      alertId,
+      userId,
+      JSON.stringify(oldAlert),
+      JSON.stringify(updatedAlert)
+    ]);
+
+    res.json({
+      message: '✓ Alerta actualizada correctamente',
+      alert: updatedAlert
+    });
+  } catch (error) {
+    console.error('❌ Update alert error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

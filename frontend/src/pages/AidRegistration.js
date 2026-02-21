@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './AidRegistration.css';
 
 function AidRegistration() {
@@ -28,7 +27,6 @@ function AidRegistration() {
   const [searchBeneficiary, setSearchBeneficiary] = useState('');
   const [showBeneficiaryDropdown, setShowBeneficiaryDropdown] = useState(false);
   const [censadosWithDeliveries, setCensadosWithDeliveries] = useState([]);
-  const [inventoryStatus, setInventoryStatus] = useState(null); // Estado de disponibilidad de inventario
   const [checkingInventory, setCheckingInventory] = useState(false); // Indicador de carga
   const [inventoryStatusMap, setInventoryStatusMap] = useState({}); // Mapa de inventarios para todos los tipos
   const [generatedReceipts, setGeneratedReceipts] = useState([]); // Comprobantes generados
@@ -39,48 +37,39 @@ function AidRegistration() {
     return { Authorization: `Bearer ${token}` };
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Monitorear cambios en censado_id
-  useEffect(() => {
-    console.log('▶▶▶ formData.censado_id cambió a:', formData.censado_id);
-  }, [formData.censado_id]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const [censadosRes, aidTypesRes] = await Promise.all([
+      const [censadosRes, aidTypesRes, deliveriesRes] = await Promise.all([
         axios.get('http://localhost:5000/api/censo', { headers: getHeaders() }),
-        axios.get('http://localhost:5000/api/aids/types', { headers: getHeaders() })
+        axios.get('http://localhost:5000/api/aids/types', { headers: getHeaders() }),
+        axios.get('http://localhost:5000/api/aids/delivery', { headers: getHeaders() })
       ]);
 
       setCensados(censadosRes.data);
       setAidTypes(aidTypesRes.data);
       
-      // Cargar beneficiarios con entregas para información del usuario
-      fetchCensadosWithDeliveries();
-    } catch (err) {
-      setError('Error cargando datos');
-      console.error(err);
-    }
-  };
-
-  const fetchCensadosWithDeliveries = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/aids/delivery', { headers: getHeaders() });
       // Agrupar entregas por censado_id
       const deliveriesByCensado = {};
-      response.data.forEach(delivery => {
+      deliveriesRes.data.forEach(delivery => {
         if (!deliveriesByCensado[delivery.censado_id]) {
           deliveriesByCensado[delivery.censado_id] = true;
         }
       });
       setCensadosWithDeliveries(Object.keys(deliveriesByCensado));
     } catch (err) {
-      console.error('Error cargando beneficiarios con entregas:', err);
+      setError('Error cargando datos');
+      console.error(err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Monitorear cambios en censado_id
+  useEffect(() => {
+    console.log('▶▶▶ formData.censado_id cambió a:', formData.censado_id);
+  }, [formData.censado_id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -122,7 +111,6 @@ function AidRegistration() {
         checkInventory(value, formData.municipio);
       } else {
         console.log('  No se puede verificar - falta tipo_ayuda_id o municipio');
-        setInventoryStatus(null);
       }
     } else {
       setFormData(prev => ({
@@ -184,7 +172,7 @@ function AidRegistration() {
     }));
     setSearchBeneficiary('');
     setShowBeneficiaryDropdown(false);
-    setInventoryStatus(null); // Limpiar estado de inventario
+
     
     // Cargar inventarios para TODOS los tipos de ayuda
     loadAllInventories(censado.municipio);
@@ -228,7 +216,6 @@ function AidRegistration() {
   const checkInventory = async (aidTypeId, municipality) => {
     if (!aidTypeId || !municipality) {
       console.log('⚠️  checkInventory: faltan parámetros', { aidTypeId, municipality });
-      setInventoryStatus(null);
       return;
     }
 
@@ -244,14 +231,8 @@ function AidRegistration() {
       );
       
       console.log('✓ Respuesta del servidor:', response.data);
-      setInventoryStatus(response.data);
     } catch (err) {
       console.error('❌ Error checking inventory:', err);
-      setInventoryStatus({
-        disponible: false,
-        cantidad: 0,
-        mensaje: 'Error verificando inventario'
-      });
     } finally {
       setCheckingInventory(false);
     }
@@ -301,6 +282,10 @@ function AidRegistration() {
           // Usar la primera entrega como referencia y enviar todos los IDs
           const deliveryIds = createdDeliveries.map(d => d.id);
           
+          console.log('Intentando generar comprobante...');
+          console.log('  deliveryId:', createdDeliveries[0].id);
+          console.log('  relatedDeliveries:', deliveryIds);
+          
           const receiptResponse = await axios.post(
             `http://localhost:5000/api/receipts/${createdDeliveries[0].id}`,
             { 
@@ -310,6 +295,8 @@ function AidRegistration() {
             { headers: getHeaders() }
           );
 
+          console.log('Comprobante generado exitosamente:', receiptResponse.data);
+          
           receipts.push({
             deliveryId: createdDeliveries[0].id,
             receiptId: receiptResponse.data.id,
@@ -317,17 +304,21 @@ function AidRegistration() {
             hash: receiptResponse.data.hash
           });
         } catch (err) {
-          console.error(`Error generando comprobante:`, err);
+          console.error('Error generando comprobante:');
+          console.error('  Status:', err.response?.status);
+          console.error('  Message:', err.response?.data?.error || err.message);
+          console.error('  Response:', err.response?.data);
+          console.error('  Full error:', err);
         }
       }
 
       setGeneratedReceipts(receipts);
 
       setMessage(
-        `✓ ${aidItems.length} ayuda(s) registrada(s) exitosamente - 1 comprobante generado`
+        `✓ ${aidItems.length} ayuda(s) registrada(s) exitosamente - ${receipts.length} comprobante(s) generado(s)`
       );
       
-      // Limpiar todo
+      // Limpiar todo PERO NO LIMPIAR generatedReceipts inmediatamente
       setFormData({
         censado_id: '',
         tipo_ayuda_id: '',
@@ -338,7 +329,8 @@ function AidRegistration() {
       setAidItems([]);
       setBeneficiarySigned(false);
 
-      setTimeout(() => setMessage(''), 5000);
+      // El mensaje se limpia después 10 segundos, pero generatedReceipts permanece visible
+      setTimeout(() => setMessage(''), 10000);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al registrar ayudas');
     } finally {
@@ -709,49 +701,73 @@ function AidRegistration() {
         )}
       </div>
 
-      {/* Sección de Comprobantes Generados */}
+      {/* Sección de Comprobantes Generados - Permanece visible */}
       {generatedReceipts.length > 0 && (
         <div style={{
-          backgroundColor: 'rgba(40, 167, 69, 0.1)',
-          border: '2px solid #28a745',
-          borderRadius: '8px',
-          padding: '20px',
-          marginTop: '30px'
+          backgroundColor: 'rgba(40, 167, 69, 0.15)',
+          border: '3px solid #28a745',
+          borderRadius: '12px',
+          padding: '25px',
+          marginTop: '30px',
+          boxShadow: '0 4px 12px rgba(40, 167, 69, 0.2)'
         }}>
-          <h2 style={{ color: '#155724', marginTop: 0 }}>✓ Comprobantes Generados</h2>
-          <p style={{ color: '#155724', marginBottom: '20px' }}>
-            Se han generado {generatedReceipts.length} comprobante(s) digital(es) para las entregas registradas:
+          <h2 style={{ color: '#155724', marginTop: 0, fontSize: '20px' }}>
+            ✓ Comprobante(s) Generado(s) Exitosamente
+          </h2>
+          <p style={{ color: '#155724', marginBottom: '25px', fontSize: '15px' }}>
+            Se han generado {generatedReceipts.length} comprobante(s) digital(es). 
+            Descarga el PDF para obtener tu comprobante de entrega:
           </p>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '15px'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '20px'
           }}>
             {generatedReceipts.map((receipt, index) => (
               <div key={index} style={{
                 backgroundColor: 'white',
-                border: '1px solid #28a745',
-                borderRadius: '6px',
-                padding: '15px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                border: '2px solid #28a745',
+                borderRadius: '8px',
+                padding: '20px',
+                boxShadow: '0 3px 10px rgba(40, 167, 69, 0.15)',
+                transition: 'all 0.3s ease'
               }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#155724' }}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#155724', fontSize: '16px' }}>
                   Comprobante #{index + 1}
-                </h4>
-                <p style={{ margin: '8px 0', fontSize: '13px' }}>
-                  <strong>Número:</strong> {receipt.receiptNumber}
-                </p>
-                <p style={{ margin: '8px 0', fontSize: '13px' }}>
-                  <strong>ID Entrega:</strong> {receipt.deliveryId}
-                </p>
-                <p style={{ margin: '8px 0', fontSize: '12px', color: '#7f8c8d' }}>
-                  <strong>Hash:</strong> {receipt.hash.substring(0, 16)}...
-                </p>
+                </h3>
+                <div style={{ backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '5px', marginBottom: '15px' }}>
+                  <p style={{ margin: '8px 0', fontSize: '13px' }}>
+                    <strong style={{ color: '#2c3e50' }}>Número:</strong> <span style={{ color: '#27ae60', fontWeight: 'bold' }}>{receipt.receiptNumber}</span>
+                  </p>
+                  <p style={{ margin: '8px 0', fontSize: '13px' }}>
+                    <strong style={{ color: '#2c3e50' }}>Hash de Verificación:</strong> <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#7f8c8d' }}>{receipt.hash.substring(0, 20)}...</span>
+                  </p>
+                </div>
                 <button
                   type="button"
                   className="btn btn-success"
                   onClick={() => downloadReceipt(receipt.receiptId, receipt.receiptNumber)}
-                  style={{ marginTop: '12px', width: '100%' }}
+                  style={{ 
+                    marginTop: '0', 
+                    width: '100%',
+                    fontSize: '15px',
+                    padding: '12px',
+                    fontWeight: 'bold',
+                    backgroundColor: '#28a745',
+                    border: 'none',
+                    borderRadius: '5px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.backgroundColor = '#218838';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.backgroundColor = '#28a745';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
                 >
                   📥 Descargar PDF
                 </button>
