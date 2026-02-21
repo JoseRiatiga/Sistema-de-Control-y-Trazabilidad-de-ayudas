@@ -76,109 +76,87 @@ function Reports() {
     }
   };
 
-  const downloadReport = async () => {
+  const downloadExcel = async () => {
     try {
-      // Mapeo de tipos de reporte a nombres en español
-      const reportTypeNames = {
-        deliveries: 'Entregas',
-        inventory: 'Inventario',
-        beneficiaries: 'Beneficiarios',
-        'duplicate-alerts': 'Alertas de Duplicidad',
-        'control-entities': 'Entes de Control'
-      };
+      setLoading(true);
+      setError('');
 
-      // Mapeo de nombres de columnas a títulos profesionales
-      const columnMapping = {
-        municipio: 'Municipio',
-        aid_type: 'Tipo de Ayuda',
-        aid_type_name: 'Tipo de Ayuda',
-        nombre: 'Tipo de Ayuda',
-        cantidad: 'Cantidad',
-        costo_unitario: 'Costo Unitario',
-        total_valor: 'Valor Total',
-        total_value: 'Valor Total',
-        primer_nombre: 'Primer Nombre',
-        primer_apellido: 'Primer Apellido',
-        cedula: 'Cédula',
-        identification: 'Cédula',
-        fecha_entrega: 'Fecha de Entrega',
-        delivery_date: 'Fecha de Entrega',
-        operator_name: 'Operador',
-        operador_id: 'Operador',
-        dia: 'Día',
-        mes: 'Mes',
-        año: 'Año',
-        total_entregas: 'Total de Entregas',
-        total_deliveries: 'Total de Entregas',
-        total_beneficiarios: 'Total de Beneficiarios',
-        total_beneficiaries: 'Total de Beneficiarios',
-        dias_desde_ultima_entrega: 'Días Desde Última Entrega',
-        total_quantity: 'Cantidad Total',
-        cantidad_total: 'Cantidad Total',
-        beneficiaries: 'Beneficiarios',
-        assisted_beneficiaries: 'Beneficiarios Asistidos',
-        total_family_members: 'Total Miembros Familia',
-        total_alerts: 'Total Alertas',
-        pending: 'Pendientes',
-        reviewed: 'Revisadas',
-        resolved: 'Resueltas',
-        total_items: 'Total Items',
-        alerts_generated: 'Alertas Generadas',
-        id: 'ID',
-        email: 'Email',
-        creado_en: 'Creado En',
-        actualizado_en: 'Actualizado En',
-        estado: 'Estado',
-        estado_alerta: 'Estado Alerta',
-        notas: 'Notas',
-        censado_id: 'ID Beneficiario',
-        tipo_ayuda_id: 'ID Tipo de Ayuda'
-      };
-
-      // Obtener headers originales y mapearlos
-      const originalHeaders = Object.keys(reportData[0] || {});
-      const displayHeaders = originalHeaders.map(h => columnMapping[h] || translateColumnName(h));
-
-      // Crear CSV con BOM para UTF-8 (para que Excel reconozca acentos)
-      const header = '\uFEFF' + displayHeaders.map(h => `"${h}"`).join(',');
+      const params = new URLSearchParams();
       
-      const rows = reportData.map(row =>
-        originalHeaders.map(header => {
-          let value = row[header] || '';
-          
-          // Formatear fechas
-          if ((header.includes('fecha') || header.includes('date')) && value) {
-            value = new Date(value).toLocaleDateString('es-ES');
-          }
-          
-          // Formatear números con decimales
-          if ((header.includes('costo') || header.includes('valor') || header.includes('total')) && !isNaN(value) && value !== '') {
-            value = parseFloat(value).toFixed(2);
-          }
-          
-          return `"${value}"`;
-        }).join(',')
-      );
+      if (municipality) params.append('municipality', municipality);
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
 
-      const csv = [header, ...rows].join('\n');
+      const url = `http://localhost:5000/api/reports/excel/download/${reportType}?${params.toString()}`;
+      
+      const response = await axios.get(url, { 
+        headers,
+        responseType: 'blob'
+      });
 
-      // Crear blob con encoding UTF-8
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
+      const href = URL.createObjectURL(blob);
       
-      const reportName = reportTypeNames[reportType] || reportType;
       const date = new Date().toISOString().split('T')[0];
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `Reporte_${reportName}_${date}.csv`);
+      const filename = `Reporte_${reportType}_${date}.xlsx`;
+
+      link.setAttribute('href', href);
+      link.setAttribute('download', filename);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(href);
+
+      setLoading(false);
     } catch (err) {
-      console.error('Error descargando reporte:', err);
+      setError('No se pudo descargar el Excel. Verifica que existan datos.');
+      console.error(err);
+      setLoading(false);
+    }
+  };
+
+  const downloadCsv = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const params = new URLSearchParams();
+      
+      if (municipality) params.append('municipality', municipality);
+      if (dateFrom) params.append('dateFrom', dateFrom);
+      if (dateTo) params.append('dateTo', dateTo);
+
+      const url = `http://localhost:5000/api/reports/csv/download/${reportType}?${params.toString()}`;
+      
+      const response = await axios.get(url, { 
+        headers,
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const href = URL.createObjectURL(blob);
+      
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Reporte_${reportType}_${date}.csv`;
+
+      link.setAttribute('href', href);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(href);
+
+      setLoading(false);
+    } catch (err) {
+      setError('No se pudo descargar el CSV. Verifica que existan datos.');
+      console.error(err);
+      setLoading(false);
     }
   };
 
@@ -199,11 +177,13 @@ function Reports() {
               value={reportType}
               onChange={(e) => setReportType(e.target.value)}
             >
-              <option value="deliveries">Entregas por Municipio</option>
+              <option value="deliveries">Entregas Detalladas</option>
+              <option value="deliveries_by_municipality">Entregas por Municipio</option>
               <option value="inventory">Inventario</option>
               <option value="beneficiaries">Beneficiarios</option>
-              <option value="duplicate-alerts">Alertas de Duplicidad</option>
-              <option value="control-entities">Reporte para Entes de Control</option>
+              <option value="duplicate_alerts">Alertas de Duplicidad</option>
+              <option value="audit_log">Bitácora de Auditoría</option>
+              <option value="control-entities">Entes de Control</option>
             </select>
           </div>
 
@@ -251,9 +231,14 @@ function Reports() {
         <div className="card">
           <div className="report-header">
             <h2>Resultados del Reporte</h2>
-            <button className="btn btn-success" onClick={downloadReport}>
-              Descargar CSV
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-success" onClick={downloadExcel} disabled={loading}>
+                {loading ? 'Descargando...' : 'Descargar Excel'}
+              </button>
+              <button className="btn btn-info" onClick={downloadCsv} disabled={loading}>
+                {loading ? 'Descargando...' : 'Descargar CSV'}
+              </button>
+            </div>
           </div>
 
           <table className="table">

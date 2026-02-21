@@ -19,6 +19,7 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
+    req.user = decoded; // Guardar el objeto decodificado completo
     // Accept both 'role' (English) and 'rol' (Spanish) from JWT
     req.userRole = decoded.role || decoded.rol;
     console.log('   ✓ Token verificado. User ID:', req.userId);
