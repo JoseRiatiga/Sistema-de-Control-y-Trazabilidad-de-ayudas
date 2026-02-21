@@ -2,77 +2,90 @@
 
 Sistema integral para la gestión, control y auditoría de ayudas humanitarias con enfoque en transparencia y prevención de duplicidades.
 
-**Versión:** 1.0.0  
-**Estado:** ✅ Completamente funcional  
-**Última actualización:** 18 de febrero de 2026
+**Versión:** 1.1.0  
+**Estado:** [OK] Completamente funcional  
+**Última actualización:** 21 de febrero de 2026
 
 ## Características Principales
 
 ### 1. Registro de Ayudas
-- Registro digital de todas las ayudas entregadas
-- Vinculación automática con base de censados (Censo)
-- Generación de comprobantes (Recibos) digitales en PDF
-- Trazabilidad completa del proceso
-- Verificación automática de stock disponible
-- Detección automática de entregas duplicadas
-- Soporte para múltiples tipos de ayuda por registro
-- Agrupación de entregas en comprobante único
+- [OK] Registro digital de todas las ayudas entregadas
+- [OK] Vinculación automática con base de censados (Censo)
+- [OK] Generación de comprobantes (Recibos) digitales en PDF
+- [OK] Trazabilidad completa del proceso
+- [OK] Verificación automática de stock disponible
+- [OK] Detección automática de entregas duplicadas
+- [OK] Soporte para múltiples tipos de ayuda por registro
+- [OK] Agrupación de entregas en comprobante único
 
 ### 2. Control de Inventario
-- Gestión centralizada de inventario por municipio
-- Seguimiento en tiempo real de cantidad disponible
-- Indicadores visuales de disponibilidad (✓/✗)
-- Cálculo automático de stock
-- Ubicación de almacenes por municipio
-- Actualización inmediata tras entregas
+- [OK] Gestión centralizada de inventario por municipio
+- [OK] Seguimiento en tiempo real de cantidad disponible
+- [OK] Indicadores visuales de disponibilidad (✓/✗)
+- [OK] Cálculo automático de stock
+- [OK] Ubicación de almacenes por municipio
+- [OK] Actualización inmediata tras entregas
 
 ### 3. Gestión de Beneficiarios
-- Base de datos de censados (beneficiarios)
-- Búsqueda por cédula de identidad
-- Información de ubicación geográfica
-- Historial completo de entregas
-- Validación automática de datos
+- [OK] Base de datos de censados (beneficiarios)
+- [OK] Búsqueda por cédula de identidad
+- [OK] Información de ubicación geográfica
+- [OK] Historial completo de entregas
+- [OK] Validación automática de datos
 
 ### 4. Alertas de Duplicidad
-- Detección automática de entregas repetidas
-- Período configurable de verificación (últimas 30 días)
-- Sistema de alertas en tiempo real
-- Interfaz de revisión y resolución
-- Anotaciones de auditoría en alertas
+- [OK] Detección automática de entregas repetidas
+- [OK] Período configurable de verificación (últimas 30 días)
+- [OK] Sistema de alertas en tiempo real
+- [OK] Interfaz de revisión y resolución
+- [OK] Anotaciones de auditoría en alertas
 
 ### 5. Bitácora Completa de Entregas
-- Registro de todas las entregas (tabla: entregas_ayuda)
-- Información del operador responsable
-- Fecha, hora y cantidad exact
-- Municipio y observaciones
-- Desglose de múltiples items por entrega
-- Búsqueda y filtrado avanzado
+- [OK] Registro de todas las entregas (tabla: entregas_ayuda)
+- [OK] Información del operador responsable
+- [OK] Fecha, hora y cantidad exact
+- [OK] Municipio y observaciones
+- [OK] Desglose de múltiples items por entrega
+- [OK] Búsqueda y filtrado avanzado
 
-### 6. Reportes Flexibles
-- Reporte de entregas (CSV exportable)
-- Reporte de inventario (CSV exportable)
-- Reporte de beneficiarios (CSV exportable)
-- Reporte de alertas de duplicidad (CSV exportable)
-- Reporte para entes de control (CSV exportable)
-- Filtros por municipio y rangos de fecha
-- Codificación UTF-8 con BOM para Excel
+### 6. Reportes Profesionales - Dual Format
+- **Excel (.xlsx):** Formato profesional con:
+  - [OK] Encabezado estructurado con información del reporte
+  - [OK] Formato de tabla con bordes y colores
+  - [OK] Autoajuste de ancho de columnas según contenido
+  - [OK] Orientación horizontal (landscape) para mejor legibilidad
+  - [OK] Datos del usuario que generó el reporte
+  - [OK] Metadatos completos (fecha, hora, período, municipio)
+- **CSV (.csv):** Formato plano exportable con:
+  - [OK] Codificación UTF-8 con BOM para Excel
+  - [OK] Sin información de encabezado (solo datos)
+  - [OK] Comas delimitadas, compatible con cualquier herramienta
+- **Reportes disponibles:**
+  - [OK] Entregas detalladas
+  - [OK] Entregas por municipio
+  - [OK] Inventario
+  - [OK] Beneficiarios
+  - [OK] Alertas de duplicidad
+  - [OK] Control-entities (para entes de control)
+  - [OK] Bitácora de auditoría
+- [OK] Filtros por municipio y rangos de fecha
 
 ### 7. Auditoría y Control
-- Registro completo de todos los cambios (tabla: bitacora_auditoria)
-- Identificación del usuario responsable
-- Comparativa antes/después en JSON
-- Visualización profesional en interfaz
-- Traducción de nombres de tablas a español
-- Reportes para entes de control con formato ejecutivo
+- [OK] Registro completo de todos los cambios (tabla: bitacora_auditoria)
+- [OK] Identificación del usuario responsable
+- [OK] Comparativa antes/después en JSON
+- [OK] Visualización profesional en interfaz
+- [OK] Traducción de nombres de tablas a español
+- [OK] Reportes para entes de control con formato ejecutivo
 
 ### 8. Comprobantes Digitales (PDF)
-- Generación automática de comprobantes en PDF
-- Número único de comprobante sequencial
-- Información del operador y beneficiario
-- Tabla de ítems entregados
-- Fecha y hora de generación
-- Formato profesional imprimible
-- Un comprobante por evento de registro (agrupa múltiples ítems)
+- [OK] Generación automática de comprobantes en PDF
+- [OK] Número único de comprobante sequencial
+- [OK] Información del operador y beneficiario
+- [OK] Tabla de ítems entregados
+- [OK] Fecha y hora de generación
+- [OK] Formato profesional imprimible
+- [OK] Un comprobante por evento de registro (agrupa múltiples ítems)
 
 ## Stack Tecnológico
 
@@ -81,6 +94,8 @@ Sistema integral para la gestión, control y auditoría de ayudas humanitarias c
 - **Base de Datos:** PostgreSQL 12+
 - **Autenticación:** JWT (jsonwebtoken 9.0.0)
 - **Encriptación:** bcryptjs 2.4.3 para contraseñas
+- **Excel Generation:** ExcelJS 4.3.0 (formato profesional con estilos)
+- **CSV Generation:** json2csv 6.0.0 (conversión de datos a CSV)
 - **PDF Generation:** PDFKit 0.13.0
 - **Gestión de Ambiente:** dotenv 16.0.3
 - **CORS:** cors 2.8.5
@@ -128,7 +143,7 @@ Sistema de Control y Trazabilidad de ayudas/
 │   │   │   ├── censo.js            # Beneficiarios
 │   │   │   ├── inventory.js        # Gestión de inventario
 │   │   │   ├── audit.js            # Auditoría y alertas
-│   │   │   ├── reports.js          # Reportes y exportación CSV
+│   │   │   ├── reports.js          # Reportes Excel (.xlsx) y CSV (.csv)
 │   │   │   └── receipts.js         # Generación de comprobantes PDF
 │   │   ├── middleware/
 │   │   │   └── auth.js             # JWT, roles, auditoría, detección duplicados
@@ -194,36 +209,36 @@ Sistema de Control y Trazabilidad de ayudas/
 ## Roles y Permisos
 
 ### Administrador (`administrador`)
-- ✅ Crear y gestionar usuarios del sistema
-- ✅ Crear tipos de ayuda
-- ✅ Crear y actualizar inventario por municipio
-- ✅ Registrar entregas de ayuda
-- ✅ Ver todos los reportes (entregas, inventario, beneficiarios, etc.)
-- ✅ Acceso completo a auditoría y bitácora
-- ✅ Ver y resolver alertas de duplicidad
-- ✅ Cambiar contraseña
-- ✅ Gestionar configuración del sistema
+- [OK] Crear y gestionar usuarios del sistema
+- [OK] Crear tipos de ayuda
+- [OK] Crear y actualizar inventario por municipio
+- [OK] Registrar entregas de ayuda
+- [OK] Ver todos los reportes (entregas, inventario, beneficiarios, etc.)
+- [OK] Acceso completo a auditoría y bitácora
+- [OK] Ver y resolver alertas de duplicidad
+- [OK] Cambiar contraseña
+- [OK] Gestionar configuración del sistema
 
 ### Operador (`operador`)
-- ✅ Registrar entregas de ayuda (su municipio)
-- ✅ Consultar inventario disponible
-- ✅ Generar comprobantes (recibos PDF)
-- ✅ Ver entregas de su municipio
-- ✅ Gestionar beneficiarios/censo (búsqueda)
-- ✅ Cambiar contraseña
-- ❌ No puede crear usuarios
-- ❌ No puede ver auditoría completa
-- ❌ No puede ver reportes administrativos
+- [OK] Registrar entregas de ayuda (su municipio)
+- [OK] Consultar inventario disponible
+- [OK] Generar comprobantes (recibos PDF)
+- [OK] Ver entregas de su municipio
+- [OK] Gestionar beneficiarios/censo (búsqueda)
+- [OK] Cambiar contraseña
+- [NO] No puede crear usuarios
+- [NO] No puede ver auditoría completa
+- [NO] No puede ver reportes administrativos
 
 ### Auditor (`auditor`)
-- ✅ Ver alertas de duplicidad
-- ✅ Acceso a bitácoras de entregas
-- ✅ Generar reportes administrativos
-- ✅ Acceso a auditoría completa
-- ✅ Cambiar contraseña
-- ❌ No puede crear/modificar entregas
-- ❌ No puede crear usuarios
-- ❌ No puede gestionar inventario
+- [OK] Ver alertas de duplicidad
+- [OK] Acceso a bitácoras de entregas
+- [OK] Generar reportes administrativos
+- [OK] Acceso a auditoría completa
+- [OK] Cambiar contraseña
+- [NO] No puede crear/modificar entregas
+- [NO] No puede crear usuarios
+- [NO] No puede gestionar inventario
 
 ## Instalación
 
@@ -296,7 +311,7 @@ npm run dev
 npm start
 ```
 
-✅ **Esperado:** `Servidor iniciado en puerto 5000`
+[OK] **Esperado:** `Servidor iniciado en puerto 5000`
 
 Verificar en: http://localhost:5000/health
 
@@ -314,7 +329,7 @@ npm install
 npm start
 ```
 
-✅ **Esperado:** Abre automáticamente http://localhost:3000
+[OK] **Esperado:** Abre automáticamente http://localhost:3000
 
 ### Paso 4: Crear Usuario Inicial
 
@@ -430,20 +445,33 @@ GET    /audit/summary                           # Resumen de auditoría (admin)
 PATCH  /audit/duplicate-alerts/:id              # Resolver alerta (auditor/admin)
 ```
 
-### Reportes (`/reports`) - CSV Exportable
+### Reportes (`/reports`) - Excel y CSV Exportable
 ```
-GET    /reports/deliveries                      # Reporte entregas (auditor/admin)
-GET    /reports/inventory                       # Reporte inventario
-GET    /reports/beneficiaries                   # Reporte beneficiarios
-GET    /reports/duplicate-alerts                # Reporte alertas duplicidad
-GET    /reports/control-entities                # Reporte para entes control
+## Endpoints de Datos (para la interfaz)
+GET    /reports/deliveries                      # Obtener datos reporte entregas (auditor/admin)
+GET    /reports/inventory                       # Obtener datos reporte inventario
+GET    /reports/beneficiaries                   # Obtener datos reporte beneficiarios
+GET    /reports/duplicate-alerts                # Obtener datos reporte alertas duplicidad
+GET    /reports/audit_log                       # Obtener datos bitácora auditoría
+GET    /reports/control-entities                # Obtener datos reporte entes control
 
-Parámetros comunes:
-  ?municipality=La Paz      # Filtrar por municipio
-  ?dateFrom=2024-01-01      # Fecha inicio (YYYY-MM-DD)
-  ?dateTo=2024-12-31        # Fecha fin
+## Endpoints de Descarga
+GET    /reports/excel/download/:reportType      # Descargar Excel (.xlsx) formateado
+GET    /reports/csv/download/:reportType        # Descargar CSV (.csv) plano
+
+
+Tipos de reporte:
+  - deliveries
+  - deliveries_by_municipality
+  - inventory
+  - beneficiaries
+  - duplicate_alerts
+  - audit_log
+  - control-entities
   
-Respuestas: CSV con encoding UTF-8 BOM para Excel
+Respuestas:
+  Excel: Archivo .xlsx con formato profesional (bordes, colores, estilos)
+  CSV: Archivo .csv con encoding UTF-8 BOM para compatibilidad Excel
 ```
 
 ### Comprobantes (`/receipts`) - PDF Generation
@@ -564,67 +592,113 @@ Authorization: Bearer {token}
 }
 ```
 
-### Generar Reporte CSV
+### Generar y Descargar Reportes
 
+**Excel - Formato Profesional:**
 ```bash
-# Reporte de entregas con filtros
-curl -X GET "http://localhost:5000/api/reports/deliveries?municipality=La Paz&dateFrom=2024-01-01&dateTo=2024-12-31" \
-  -H "Authorization: Bearer {token}"
+# Descargar reporte de entregas como Excel
+curl -X GET "http://localhost:5000/api/reports/excel/download/deliveries?municipality=La Paz&dateFrom=2024-01-01&dateTo=2024-12-31" \
+  -H "Authorization: Bearer {token}" \
+  -o Reporte_Entregas.xlsx
 
-# Respuesta: Archivo CSV con BOM UTF-8 para Excel
+# Respuesta: Archivo Reporte_Entregas_2026-02-21.xlsx con formato profesional
 ```
+
+**CSV - Formato Plano:**
+```bash
+# Descargar reporte de entregas como CSV
+curl -X GET "http://localhost:5000/api/reports/csv/download/deliveries?municipality=La Paz&dateFrom=2024-01-01&dateTo=2024-12-31" \
+  -H "Authorization: Bearer {token}" \
+  -o Reporte_Entregas.csv
+
+# Respuesta: Archivo Reporte_Entregas_2026-02-21.csv con datos planos UTF-8
+```
+
+**Desde la interfaz web:**
+1. Navegar a la página de Reportes
+2. Seleccionar tipo de reporte
+3. Aplicar filtros (municipio, fecha)
+4. Hacer clic en "Descargar Excel" o "Descargar CSV"
+5. El archivo se descargará automáticamente
 
 ## Seguridad Implementada
 
 ### Autenticación y Autorización
-- ✅ **JWT (jsonwebtoken 9.0.0):** Tokens con expiración configurable
-- ✅ **bcryptjs 2.4.3:** Hashing de contraseñas con salt rounds = 10
-- ✅ **Verificación de rol:** Cada endpoint valida permisos del usuario
-- ✅ **Middleware de autenticación:** verifyToken, verifyRole, setCurrentUser
+- [OK] **JWT (jsonwebtoken 9.0.0):** Tokens con expiración configurable
+- [OK] **bcryptjs 2.4.3:** Hashing de contraseñas con salt rounds = 10
+- [OK] **Verificación de rol:** Cada endpoint valida permisos del usuario
+- [OK] **Middleware de autenticación:** verifyToken, verifyRole, setCurrentUser
 
 ### Validación de Datos
-- ✅ **Detección automática de duplicados:** En tiempo real al registrar entregas
-- ✅ **Validación de stock:** Verificación de inventario disponible
-- ✅ **Parameterized queries:** Prevención de SQL injection en todas partes
-- ✅ **Validación de entrada:** Tipos y formatos requeridos
+- [OK] **Detección automática de duplicados:** En tiempo real al registrar entregas
+- [OK] **Validación de stock:** Verificación de inventario disponible
+- [OK] **Parameterized queries:** Prevención de SQL injection en todas partes
+- [OK] **Validación de entrada:** Tipos y formatos requeridos
 
 ### Auditoría
-- ✅ **Bitácora completa:** Tabla `bitacora_auditoria` con todos los cambios
-- ✅ **Identificación de usuario:** Cada acción registra quién la realizó
-- ✅ **Valores antes/después:** JSON con datos anteriores y nuevos
-- ✅ **Alertas de duplicidad:** Tabla `alertas_duplicidad` con autodetección
+- [OK] **Bitácora completa:** Tabla `bitacora_auditoria` con todos los cambios
+- [OK] **Identificación de usuario:** Cada acción registra quién la realizó
+- [OK] **Valores antes/después:** JSON con datos anteriores y nuevos
+- [OK] **Alertas de duplicidad:** Tabla `alertas_duplicidad` con autodetección
 
 ### Transmisión
-- ✅ **CORS:** Controlado por variable `CORS_ORIGIN`
-- ✅ **HTTPS ready:** Estructura preparada para producción con SSL
-- ✅ **Timeouts:** Conexiones con límites configurables
+- [OK] **CORS:** Controlado por variable `CORS_ORIGIN`
+- [OK] **HTTPS ready:** Estructura preparada para producción con SSL
+- [OK] **Timeouts:** Conexiones con límites configurables
 
 ## Características Técnicas Adicionales
 
 ### Generación de Comprobantes PDF
-- ✅ **PDFKit 0.13.0:** Generación nativa en Node.js
-- ✅ **Múltiples ítems:** Tabla con todos los items en un PDF
-- ✅ **Información completa:** Operador, beneficiario, fecha, firma
-- ✅ **Almacenamiento:** Directorio `/receipts` con número secuencial
+- [OK] **PDFKit 0.13.0:** Generación nativa en Node.js
+- [OK] **Múltiples ítems:** Tabla con todos los items en un PDF
+- [OK] **Información completa:** Operador, beneficiario, fecha, firma
+- [OK] **Almacenamiento:** Directorio `/receipts` con número secuencial
 
-### Exportación de Reportes CSV
-- ✅ **UTF-8 BOM:** Compatibilidad con Excel
-- ✅ **Columnas traducidas:** Nombres en español profesionales
-- ✅ **Filtrado:** Municipio, rango de fechas
-- ✅ **Formatos:** Fechas (dd/mm/yyyy), Moneda (2 decimales)
+### Exportación de Reportes - Excel y CSV
+
+#### Excel (.xlsx) - Formato Profesional
+- [OK] **ExcelJS 4.3.0:** Generación nativa con estilos
+- [OK] **Encabezado estructurado:** 
+  - Título centrado del sistema
+  - Nombre del reporte
+  - Usuario que generó el reporte
+  - Fecha y hora de generación
+  - Municipio (si aplica)
+  - Período (si aplica)
+  - Total de registros
+- [OK] **Formato de tabla profesional:**
+  - Encabezados azul oscuro (#1F4E78) con fondo gris claro
+  - Bordes en todas las celdas
+  - Alineación center en encabezados, left en datos
+  - Text wrapping para contenido largo
+- [OK] **Autoajuste inteligente:** Ancho de columnas según contenido (min 12, max 40)
+- [OK] **Orientación landscape:** Para mejor visualización
+- [OK] **Codificación UTF-8:** Tildes y acentos correctamente renderizados
+
+#### CSV (.csv) - Formato Plano
+- [OK] **json2csv 6.0.0:** Conversión automática
+- [OK] **UTF-8 BOM:** Compatibilidad directa con Excel
+- [OK] **Sin encabezado de información:** Solo datos crudos
+- [OK] **Comas delimitadas:** Compatible con herramientas de análisis
+- [OK] **Columnas traducidas:** Nombres en español profesionales
+
+#### Características Comunes
+- [OK] **Filtrado:** Municipio, rango de fechas
+- [OK] **Formatos:** Fechas (dd/mm/yyyy), Moneda (2 decimales), Números enteros
+- [OK] **Transformación de datos:** Campos calculados y traducidos según plantilla
 
 ### Base de Datos PostgreSQL
-- ✅ **9 tablas principales:** usuarios, censados, tipos_ayuda, inventario, entregas_ayuda, alertas_duplicidad, bitacora_auditoria, comprobantes_entrega, reportes
-- ✅ **11 índices:** Optimización de búsquedas
-- ✅ **2 vistas:** Consultas complejas pre-construidas
-- ✅ **Pool de conexiones:** Reutilización eficiente de conexiones
+- [OK] **9 tablas principales:** usuarios, censados, tipos_ayuda, inventario, entregas_ayuda, alertas_duplicidad, bitacora_auditoria, comprobantes_entrega, reportes
+- [OK] **11 índices:** Optimización de búsquedas
+- [OK] **2 vistas:** Consultas complejas pre-construidas
+- [OK] **Pool de conexiones:** Reutilización eficiente de conexiones
 
 ### Frontend Moderno
-- ✅ **React 18.2.0:** Hooks y Context API
-- ✅ **React Router v6:** SPA con rutas protegidas
-- ✅ **Axios 1.3.5:** HTTP client con interceptores de JWT
-- ✅ **Tema dinámico:** Light/Dark mode con CSS variables
-- ✅ **Gráficos:** Chart.js y Recharts para dashboards
+- [OK] **React 18.2.0:** Hooks y Context API
+- [OK] **React Router v6:** SPA con rutas protegidas
+- [OK] **Axios 1.3.5:** HTTP client con interceptores de JWT
+- [OK] **Tema dinámico:** Light/Dark mode con CSS variables
+- [OK] **Gráficos:** Chart.js y Recharts para dashboards
 
 ## Variables de Entorno
 
@@ -675,10 +749,10 @@ Get-Process -Name "node" | Stop-Process -Force
 ## Performance y Escalabilidad
 
 ### Optimizaciones Implementadas
-- ✅ Index en campos de búsqueda frecuente (municipio, censado_id, fecha)
-- ✅ Connection pooling en PostgreSQL
-- ✅ Compresión de respuestas CORS
-- ✅ Lazy loading en componentes React
+- [OK] Index en campos de búsqueda frecuente (municipio, censado_id, fecha)
+- [OK] Connection pooling en PostgreSQL
+- [OK] Compresión de respuestas CORS
+- [OK] Lazy loading en componentes React
 
 ### Capacidad Estimada
 - **Entregas:** 100,000+ registros sin degradación
@@ -701,8 +775,19 @@ Get-Process -Name "node" | Stop-Process -Force
 ---
 
 **Sistema:** Sistema de Control y Trazabilidad de Ayudas Humanitarias  
-**Versión:** 1.0.0  
+**Versión:** 1.1.0  
 **Estado:** Funcional  
-**Última actualización:** 18 de febrero de 2026  
+**Última actualización:** 21 de febrero de 2026  
 **Licencia:** ISC  
-**Autor:** Jose Riatiga
+**Autor:** Jose Riatiga  
+
+## Changelog Reciente
+
+### v1.1.0 - 21 de febrero de 2026
+- [NEW] **Nuevo:** Exportación de reportes en Excel (.xlsx) con ExcelJS
+- [NEW] **Nuevo:** Encabezado profesional en Excel con metadatos del reporte
+- [NEW] **Nuevo:** Autoajuste inteligente de ancho de columnas
+- [NEW] **Nuevo:** Dos botones en interfaz: "Descargar Excel" y "Descargar CSV"
+- [FIX] **Fix:** Corrección de encoding UTF-8 en CSV con BOM
+- [IMPROVE] **Mejora:** Información del usuario que generó el reporte en encabezado
+- [IMPROVE] **Mejora:** Formato vertical en encabezado Excel para mejor legibilidad
