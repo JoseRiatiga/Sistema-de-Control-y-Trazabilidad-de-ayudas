@@ -38,6 +38,7 @@ function AuditTrail() {
       'comprobantes_entrega': 'Comprobantes de Entrega',
       'bitacora_auditoria': 'Bitácora de Auditoría'
     };
+    if (!tableName) return 'N/A';
     return tableMapping[tableName] || tableName.replace(/_/g, ' ').toUpperCase();
   };
 

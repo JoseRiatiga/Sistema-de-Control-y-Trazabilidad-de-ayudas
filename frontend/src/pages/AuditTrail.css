@@ -214,7 +214,7 @@
 }
 
 .table .btn-danger {
-  background-color: var(--error);
+  /* background-color: var(--error); */
   color: white;
   border: none;
   font-weight: 600;
