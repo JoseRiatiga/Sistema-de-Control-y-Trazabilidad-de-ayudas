@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   contraseña_hash VARCHAR(255) NOT NULL,
   rol VARCHAR(50) NOT NULL CHECK (rol IN ('administrador', 'operador', 'auditor')),
   telefono VARCHAR(20),
+  direccion VARCHAR(255),
   municipio VARCHAR(100),
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

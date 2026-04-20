@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
+const sql = require('../db.js');
 
 // Importar rutas
 const authRoutes = require('./routes/auth');
@@ -23,14 +23,17 @@ app.use(cors({
   credentials: true
 }));
 
-// Pool de conexión a PostgreSQL
-const pool = new Pool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME
-});
+// Crear objeto compatible con Pool de pg
+const pool = {
+  query: async (query, params) => {
+    try {
+      const result = await sql.unsafe(query, params);
+      return { rows: result };
+    } catch (error) {
+      throw error;
+    }
+  }
+};
 
 // Hacer pool disponible globalmente
 global.db = pool;

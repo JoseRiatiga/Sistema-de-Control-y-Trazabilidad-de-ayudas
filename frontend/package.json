@@ -4,6 +4,7 @@
   "private": true,
   "description": "Sistema de Control y Trazabilidad de Ayudas Humanitarias - Frontend",
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
     "axios": "^1.3.5",
     "chart.js": "^4.2.1",
     "date-fns": "^2.29.3",
