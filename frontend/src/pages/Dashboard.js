@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { AuthContext } from '../App';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -32,8 +33,8 @@ function Dashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [deliveriesRes, alertsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/aids/delivery', { headers }),
-        axios.get('http://localhost:5000/api/audit/duplicate-alerts', {
+        axios.get(`${API_URL}/api/aids/delivery`, { headers }),
+        axios.get(`${API_URL}/api/audit/duplicate-alerts`, {
           headers
         })
       ]);

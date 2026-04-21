@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import './AidRegistration.css';
 
 function AidRegistration() {
@@ -40,9 +41,9 @@ function AidRegistration() {
   const fetchData = useCallback(async () => {
     try {
       const [censadosRes, aidTypesRes, deliveriesRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/censo', { headers: getHeaders() }),
-        axios.get('http://localhost:5000/api/aids/types', { headers: getHeaders() }),
-        axios.get('http://localhost:5000/api/aids/delivery', { headers: getHeaders() })
+        axios.get(`${API_URL}/api/censo`, { headers: getHeaders() }),
+        axios.get(`${API_URL}/api/aids/types`, { headers: getHeaders() }),
+        axios.get(`${API_URL}/api/aids/delivery`, { headers: getHeaders() })
       ]);
 
       setCensados(censadosRes.data);
@@ -126,7 +127,7 @@ function AidRegistration() {
       console.log('   censado_id:', censadoId);
       console.log('   tipo:', typeof censadoId);
       
-      const url = `http://localhost:5000/api/aids/delivery/beneficiary/${censadoId}`;
+      const url = `${API_URL}/api/aids/delivery/beneficiary/${censadoId}`;
       console.log('   URL:', url);
       
       const response = await axios.get(url, { headers: getHeaders() });
@@ -191,7 +192,7 @@ function AidRegistration() {
       
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/aids/inventory-check/${aidType.id}/${municipality}`,
+          `${API_URL}/api/aids/inventory-check/${aidType.id}/${municipality}`,
           { headers: getHeaders() }
         );
         newMap[aidType.id] = response.data;
@@ -226,7 +227,7 @@ function AidRegistration() {
       console.log('  municipality:', municipality);
       
       const response = await axios.get(
-        `http://localhost:5000/api/aids/inventory-check/${aidTypeId}/${municipality}`,
+        `${API_URL}/api/aids/inventory-check/${aidTypeId}/${municipality}`,
         { headers: getHeaders() }
       );
       
@@ -266,7 +267,7 @@ function AidRegistration() {
         };
 
         const deliveryResponse = await axios.post(
-          'http://localhost:5000/api/aids/delivery',
+          `${API_URL}/api/aids/delivery`,
           deliveryData,
           { headers: getHeaders() }
         );
@@ -287,7 +288,7 @@ function AidRegistration() {
           console.log('  relatedDeliveries:', deliveryIds);
           
           const receiptResponse = await axios.post(
-            `http://localhost:5000/api/receipts/${createdDeliveries[0].id}`,
+            `${API_URL}/api/receipts/${createdDeliveries[0].id}`,
             { 
               signedByBeneficiary: beneficiarySigned,
               relatedDeliveries: deliveryIds  // Pasar todos los IDs relacionados
@@ -377,7 +378,7 @@ function AidRegistration() {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/aids/delivery/${deliveryId}`, { headers: getHeaders() });
+      await axios.delete(`${API_URL}/api/aids/delivery/${deliveryId}`, { headers: getHeaders() });
       setMessage('✓ Entrega eliminada correctamente');
       // Recargar las entregas del beneficiario
       if (formData.censado_id) {
@@ -399,7 +400,7 @@ function AidRegistration() {
   const downloadReceipt = async (receiptId, receiptNumber) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/receipts/${receiptId}/download`,
+        `${API_URL}/api/receipts/${receiptId}/download`,
         {
           headers: getHeaders(),
           responseType: 'blob'

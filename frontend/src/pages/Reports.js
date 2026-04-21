@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './Reports.css';
 
@@ -59,7 +60,7 @@ function Reports() {
       setLoading(true);
       setError('');
 
-      const url = `http://localhost:5000/api/reports/${reportType}`;
+      const url = `${API_URL}/api/reports/${reportType}`;
       const params = {};
 
       if (municipality) params.municipality = municipality;
@@ -87,7 +88,7 @@ function Reports() {
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
 
-      const url = `http://localhost:5000/api/reports/excel/download/${reportType}?${params.toString()}`;
+      const url = `${API_URL}/api/reports/excel/download/${reportType}?${params.toString()}`;
       
       const response = await axios.get(url, { 
         headers,
@@ -129,7 +130,7 @@ function Reports() {
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
 
-      const url = `http://localhost:5000/api/reports/csv/download/${reportType}?${params.toString()}`;
+      const url = `${API_URL}/api/reports/csv/download/${reportType}?${params.toString()}`;
       
       const response = await axios.get(url, { 
         headers,

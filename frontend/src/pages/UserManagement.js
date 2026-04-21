@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { AuthContext } from '../App';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './UserManagement.css';
@@ -28,7 +29,7 @@ function UserManagement() {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const response = await axios.get('http://localhost:5000/api/auth/users', { headers });
+      const response = await axios.get(`${API_URL}/api/auth/users`, { headers });
       setUsers(response.data);
       setError('');
     } catch (err) {
@@ -97,7 +98,7 @@ function UserManagement() {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const response = await axios.post('http://localhost:5000/api/auth/create-user', formData, { headers });
+      const response = await axios.post(`${API_URL}/api/auth/create-user`, formData, { headers });
       
       setSuccessMessage(`✓ Usuario "${response.data.user.nombre}" creado exitosamente con rol "${response.data.user.rol}"`);
       
@@ -154,7 +155,7 @@ function UserManagement() {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
         
-        const response = await axios.delete(`http://localhost:5000/api/auth/delete-user/${userId}`, { headers });
+        const response = await axios.delete(`${API_URL}/api/auth/delete-user/${userId}`, { headers });
         
         setSuccessMessage(`✓ Usuario "${response.data.deletedUser.nombre}" eliminado correctamente`);
         fetchUsers();

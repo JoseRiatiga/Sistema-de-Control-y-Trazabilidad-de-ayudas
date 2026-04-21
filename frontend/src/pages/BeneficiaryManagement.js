@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import './BeneficiaryManagement.css';
 
@@ -44,7 +45,7 @@ function BeneficiaryManagement() {
   const fetchBeneficiaries = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/censo?limit=1000', { headers });
+      const response = await axios.get(`${API_URL}/api/censo?limit=1000`, { headers });
       setBeneficiaries(response.data);
       setFilteredBeneficiaries(response.data);
       setError('');
@@ -112,7 +113,7 @@ function BeneficiaryManagement() {
     try {
       setLoading(true);
       await axios.put(
-        `http://localhost:5000/api/censo/${editingId}`,
+        `${API_URL}/api/censo/${editingId}`,
         editData,
         { headers }
       );
@@ -135,7 +136,7 @@ function BeneficiaryManagement() {
 
     try {
       setLoading(true);
-      await axios.delete(`http://localhost:5000/api/censo/${id}`, { headers });
+      await axios.delete(`${API_URL}/api/censo/${id}`, { headers });
       setMessage('✓ Beneficiario eliminado correctamente');
       resetMessages();
       await fetchBeneficiaries();
@@ -173,7 +174,7 @@ function BeneficiaryManagement() {
     try {
       setLoading(true);
       await axios.post(
-        'http://localhost:5000/api/censo',
+        `${API_URL}/api/censo`,
         newBeneficiaryForm,
         { headers }
       );
@@ -201,7 +202,7 @@ function BeneficiaryManagement() {
   const fetchBeneficiaryDeliveries = async (censadoId) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/aids/delivery/beneficiary/${censadoId}`,
+        `${API_URL}/api/aids/delivery/beneficiary/${censadoId}`,
         { headers }
       );
       const deliveries = response.data.sort(

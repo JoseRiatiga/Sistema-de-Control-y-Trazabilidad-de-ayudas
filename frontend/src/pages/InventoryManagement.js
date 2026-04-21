@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import { WAREHOUSE_LOCATIONS } from '../utils/warehouseLocations';
 import './InventoryManagement.css';
@@ -30,7 +31,7 @@ function InventoryManagement() {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      let url = 'http://localhost:5000/api/inventory';
+      let url = `${API_URL}/api/inventory`;
       
       if (municipality) {
         url += `/municipality/${municipality}`;
@@ -53,7 +54,7 @@ function InventoryManagement() {
       setLoadingAidTypes(true);
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get('http://localhost:5000/api/aids/types', { headers });
+      const response = await axios.get(`${API_URL}/api/aids/types`, { headers });
       setAidTypes(response.data);
     } catch (err) {
       console.error('Error cargando tipos de ayuda:', err);
@@ -156,11 +157,11 @@ function InventoryManagement() {
       let response;
       if (editingId) {
         // Editar inventario existente
-        response = await axios.put(`http://localhost:5000/api/inventory/${editingId}`, inventoryData, { headers });
+        response = await axios.put(`${API_URL}/api/inventory/${editingId}`, inventoryData, { headers });
         setSuccessMessage(`✓ Inventario actualizado correctamente`);
       } else {
         // Crear nuevo inventario
-        response = await axios.post('http://localhost:5000/api/inventory', inventoryData, { headers });
+        response = await axios.post(`${API_URL}/api/inventory`, inventoryData, { headers });
         let successMsg = response.data.isUpdate
           ? `✓ Cantidad actualizada correctamente a ${response.data.inventory.cantidad} unidades`
           : '✓ Nuevo item de inventario agregado correctamente';
@@ -223,7 +224,7 @@ function InventoryManagement() {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
         
-        await axios.delete(`http://localhost:5000/api/inventory/${inventoryId}`, { headers });
+        await axios.delete(`${API_URL}/api/inventory/${inventoryId}`, { headers });
         
         setSuccessMessage('✓ Inventario eliminado correctamente');
         fetchInventory();

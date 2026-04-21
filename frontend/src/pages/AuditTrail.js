@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import API_URL from '../utils/apiConfig';
 import { COLOMBIAN_MUNICIPALITIES } from '../utils/municipalities';
 import { AuthContext } from '../App';
 import AlertEditModal from './AlertEditModal';
@@ -59,19 +60,19 @@ function AuditTrail() {
       setLoading(true);
 
       if (activeTab === 'alerts') {
-        const response = await axios.get('http://localhost:5000/api/audit/duplicate-alerts', {
+        const response = await axios.get(`${API_URL}/api/audit/duplicate-alerts`, {
           headers,
           params: { municipality: municipality || undefined }
         });
         setAlertData(response.data);
       } else if (activeTab === 'delivery-log') {
-        const response = await axios.get('http://localhost:5000/api/audit/delivery-log', {
+        const response = await axios.get(`${API_URL}/api/audit/delivery-log`, {
           headers,
           params: { municipality: municipality || undefined }
         });
         setAuditData(response.data);
       } else {
-        const response = await axios.get('http://localhost:5000/api/audit/change-log', {
+        const response = await axios.get(`${API_URL}/api/audit/change-log`, {
           headers
         });
         setAuditData(response.data);
@@ -111,7 +112,7 @@ function AuditTrail() {
   const updateAlertStatus = async (razon, notas) => {
     try {
       const response = await axios.patch(
-        `http://localhost:5000/api/audit/duplicate-alerts/${selectedAlert.id}`,
+        `${API_URL}/api/audit/duplicate-alerts/${selectedAlert.id}`,
         { 
           status: modalAction, 
           razon: razon,
@@ -142,7 +143,7 @@ function AuditTrail() {
   const downloadReceiptPDF = async (deliveryId) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/receipts/download/delivery/${deliveryId}`,
+        `${API_URL}/api/receipts/download/delivery/${deliveryId}`,
         {
           headers,
           responseType: 'blob'
@@ -171,7 +172,7 @@ function AuditTrail() {
 
     try {
       await axios.delete(
-        `http://localhost:5000/api/aids/delivery/${deliveryId}`,
+        `${API_URL}/api/aids/delivery/${deliveryId}`,
         { headers }
       );
       setSuccessMessage('✓ Registro de entrega y comprobante eliminados correctamente');
@@ -190,7 +191,7 @@ function AuditTrail() {
 
     try {
       await axios.delete(
-        `http://localhost:5000/api/audit/duplicate-alerts/${alertId}`,
+        `${API_URL}/api/audit/duplicate-alerts/${alertId}`,
         { headers }
       );
       setSuccessMessage('✓ Alerta de duplicidad eliminada correctamente');

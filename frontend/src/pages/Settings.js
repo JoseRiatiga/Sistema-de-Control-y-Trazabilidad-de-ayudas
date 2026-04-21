@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
+import API_URL from '../utils/apiConfig';
 import { AuthContext } from '../App';
 import './Settings.css';
 
@@ -56,7 +57,7 @@ function Settings() {
   // Cargar sesiones
   const loadSessions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/perfil/sesiones', {
+      const response = await fetch(`${API_URL}/api/perfil/sesiones`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -71,7 +72,7 @@ function Settings() {
   // Cargar estadísticas
   const loadStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/perfil/estadisticas', {
+      const response = await fetch(`${API_URL}/api/perfil/estadisticas`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -112,7 +113,7 @@ function Settings() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:5000/api/perfil/actualizar', {
+      const response = await fetch(`${API_URL}/api/perfil/actualizar`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +172,7 @@ function Settings() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch('http://localhost:5000/api/perfil/cambiar-password', {
+      const response = await fetch(`${API_URL}/api/perfil/cambiar-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -219,7 +220,7 @@ function Settings() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/perfil/solicitar-eliminacion', {
+      const response = await fetch(`${API_URL}/api/perfil/solicitar-eliminacion`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
