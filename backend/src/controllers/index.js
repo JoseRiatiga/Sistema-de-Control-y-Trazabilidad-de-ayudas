@@ -314,7 +314,18 @@ class CensoController {
   static async create(req, res) {
     try {
       const { Censado } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const censado = await Censado.create(req.body);
+      
+      const context = {
+        tipo: 'Nuevo beneficiario',
+        cedula: censado.cedula,
+        nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
+        municipio: censado.municipio
+      };
+      
+      await auditLog('CREAR', 'censados', censado.id, null, censado, req, context);
+      
       return res.status(201).json({ message: 'Beneficiario registrado', censado });
     } catch (error) {
       console.error('Create censado error:', error);
@@ -379,8 +390,26 @@ class CensoController {
   static async update(req, res) {
     try {
       const { Censado } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const { id } = req.params;
+      
+      const oldCensado = await Censado.findById(id);
+      if (!oldCensado) {
+        return res.status(404).json({ error: 'Beneficiario no encontrado' });
+      }
+      
       const censado = await Censado.update(id, req.body);
+      
+      const context = {
+        tipo: 'Actualización de beneficiario',
+        cedula: censado.cedula,
+        nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
+        municipio: censado.municipio,
+        campos_modificados: Object.keys(req.body).join(', ')
+      };
+      
+      await auditLog('EDITAR', 'censados', id, oldCensado, censado, req, context);
+      
       return res.json({ message: 'Beneficiario actualizado', censado });
     } catch (error) {
       console.error('Update censado error:', error);
@@ -391,9 +420,26 @@ class CensoController {
   static async delete(req, res) {
     try {
       const { Censado } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const { id } = req.params;
-      const censado = await Censado.delete(id);
-      return res.json({ message: 'Beneficiario eliminado', censado });
+      
+      const censado = await Censado.findById(id);
+      if (!censado) {
+        return res.status(404).json({ error: 'Beneficiario no encontrado' });
+      }
+      
+      const deletedCensado = await Censado.delete(id);
+      
+      const context = {
+        tipo: 'Eliminación de beneficiario',
+        cedula: censado.cedula,
+        nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
+        municipio: censado.municipio
+      };
+      
+      await auditLog('ELIMINAR', 'censados', id, censado, null, req, context);
+      
+      return res.json({ message: 'Beneficiario eliminado', censado: deletedCensado });
     } catch (error) {
       console.error('Delete censado error:', error);
       return res.status(500).json({ error: error.message });
@@ -723,8 +769,33 @@ class AidDeliveryController {
 class InventoryController {
   static async create(req, res) {
     try {
-      const { Inventory } = require('../models');
+      const { Inventory, AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const result = await Inventory.create(req.body);
+      
+      const aidType = await AidType.findById(result.tipo_ayuda_id);
+      
+      const action = result.isUpdate ? 'EDITAR' : 'CREAR';
+      const context = {
+        tipo: result.isUpdate ? 'Actualización de inventario' : 'Nuevo item de inventario',
+        tipo_ayuda: aidType?.nombre || 'Desconocido',
+        cantidad: result.cantidad,
+        estado: result.estado,
+        municipio: result.municipio,
+        lote: result.lote,
+        fecha_caducidad: result.fecha_caducidad || 'No aplica'
+      };
+      
+      await auditLog(action, 'inventario', result.id, null, {
+        tipo_ayuda_id: result.tipo_ayuda_id,
+        cantidad: result.cantidad,
+        fecha_caducidad: result.fecha_caducidad,
+        lote: result.lote,
+        estado: result.estado,
+        municipio: result.municipio,
+        ubicacion_almacen: result.ubicacion_almacen,
+        observaciones: result.observaciones
+      }, req, context);
       
       const statusCode = result.isUpdate ? 200 : 201;
       const message = result.isUpdate 
@@ -788,9 +859,20 @@ class InventoryController {
 
   static async update(req, res) {
     try {
-      const { Inventory } = require('../models');
+      const { Inventory, AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
+      const inventoryId = req.params.id;
+      
+      const query = `SELECT * FROM inventario WHERE id = $1`;
+      const oldResult = await global.db.query(query, [inventoryId]);
+      const oldInventory = oldResult.rows[0];
+      
+      if (!oldInventory) {
+        return res.status(404).json({ error: 'Inventario no encontrado' });
+      }
+      
       const { cantidad, fecha_caducidad, lote, estado, municipio, ubicacion_almacen, observaciones } = req.body;
-      const inventory = await Inventory.update(req.params.id, {
+      const inventory = await Inventory.update(inventoryId, {
         cantidad,
         fecha_caducidad,
         lote,
@@ -799,6 +881,20 @@ class InventoryController {
         ubicacion_almacen,
         observaciones
       });
+      
+      const aidType = await AidType.findById(inventory.tipo_ayuda_id);
+      
+      const context = {
+        tipo: 'Actualización de inventario',
+        tipo_ayuda: aidType?.nombre || 'Desconocido',
+        campos_modificados: Object.keys(req.body).join(', '),
+        cantidad_anterior: oldInventory.cantidad,
+        cantidad_nueva: inventory.cantidad,
+        municipio: inventory.municipio
+      };
+      
+      await auditLog('EDITAR', 'inventario', inventoryId, oldInventory, inventory, req, context);
+      
       return res.json({ message: 'Inventario actualizado correctamente', inventory });
     } catch (error) {
       console.error('Update inventory error:', error);
@@ -808,8 +904,33 @@ class InventoryController {
 
   static async delete(req, res) {
     try {
-      const { Inventory } = require('../models');
-      const deletedInventory = await Inventory.delete(req.params.id);
+      const { Inventory, AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
+      const inventoryId = req.params.id;
+      
+      const query = `SELECT * FROM inventario WHERE id = $1`;
+      const oldResult = await global.db.query(query, [inventoryId]);
+      const oldInventory = oldResult.rows[0];
+      
+      if (!oldInventory) {
+        return res.status(404).json({ error: 'Inventario no encontrado' });
+      }
+      
+      const aidType = await AidType.findById(oldInventory.tipo_ayuda_id);
+      
+      const deletedInventory = await Inventory.delete(inventoryId);
+      
+      const context = {
+        tipo: 'Eliminación de item de inventario',
+        tipo_ayuda: aidType?.nombre || 'Desconocido',
+        cantidad_eliminada: oldInventory.cantidad,
+        lote: oldInventory.lote,
+        municipio: oldInventory.municipio,
+        estado: oldInventory.estado
+      };
+      
+      await auditLog('ELIMINAR', 'inventario', inventoryId, oldInventory, null, req, context);
+      
       return res.json({ 
         message: 'Inventario eliminado correctamente', 
         deletedInventory 

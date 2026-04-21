@@ -40,12 +40,51 @@ const verifyRole = (allowedRoles) => {
   };
 };
 
-// Middleware para logging de auditoría
-const auditLog = async (action, tableName, recordId, oldValues = null, newValues = null) => {
+// Middleware para logging de auditoría - versión mejorada
+const auditLog = async (action, tableName, recordId, oldValues = null, newValues = null, req = null, additionalContext = null) => {
   const query = `
-    INSERT INTO bitacora_auditoria (id, accion, nombre_tabla, id_registro, usuario_id, valores_antiguos, valores_nuevos, fecha)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+    INSERT INTO bitacora_auditoria (id, accion, nombre_tabla, id_registro, usuario_id, valores_antiguos, valores_nuevos, municipio, direccion_ip, agente_usuario, fecha)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
   `;
+  
+  // Extraer IP del cliente
+  const getClientIP = (req) => {
+    if (!req) return null;
+    return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+           req.headers['x-real-ip'] ||
+           req.connection.remoteAddress ||
+           req.socket.remoteAddress ||
+           null;
+  };
+  
+  const clientIP = getClientIP(req);
+  const userAgent = req?.headers['user-agent'] || null;
+  
+  // Obtener municipio del usuario actual
+  let userMunicipio = null;
+  if (global.currentUserId) {
+    try {
+      const userQuery = 'SELECT municipio FROM usuarios WHERE id = $1';
+      const userResult = await global.db.query(userQuery, [global.currentUserId]);
+      if (userResult.rows.length > 0) {
+        userMunicipio = userResult.rows[0].municipio;
+      }
+    } catch (error) {
+      console.error('Error fetching user municipio:', error.message);
+    }
+  }
+  
+  // Enriquecer valores con contexto adicional
+  let enrichedNewValues = newValues ? { ...newValues } : null;
+  let enrichedOldValues = oldValues ? { ...oldValues } : null;
+  
+  if (additionalContext) {
+    if (enrichedNewValues) {
+      enrichedNewValues._contexto = additionalContext;
+    } else if (enrichedOldValues) {
+      enrichedOldValues._contexto = additionalContext;
+    }
+  }
   
   const values = [
     uuidv4(),
@@ -53,16 +92,21 @@ const auditLog = async (action, tableName, recordId, oldValues = null, newValues
     tableName,
     recordId,
     global.currentUserId || null,
-    oldValues ? JSON.stringify(oldValues) : null,
-    newValues ? JSON.stringify(newValues) : null
+    enrichedOldValues ? JSON.stringify(enrichedOldValues) : null,
+    enrichedNewValues ? JSON.stringify(enrichedNewValues) : null,
+    userMunicipio,
+    clientIP,
+    userAgent
   ];
   
   try {
     await global.db.query(query, values);
+    console.log(`✓ Auditoría registrada: ${action} en ${tableName} (IP: ${clientIP})`);
   } catch (error) {
     console.error('Error logging audit:', error);
   }
 };
+
 
 // Middleware para validar duplicidad de entregas
 const checkDuplicateDelivery = async (req, res, next) => {
