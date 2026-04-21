@@ -48,6 +48,7 @@ class AuthController {
   static async login(req, res) {
     try {
       const { email, password } = req.body;
+      const { logLogin, getClientIP } = require('../utils/auditLogger');
       
       if (!email || !password) {
         return res.status(400).json({ error: 'Email y contraseña requeridos' });
@@ -72,6 +73,11 @@ class AuthController {
         { expiresIn: process.env.JWT_EXPIRATION || '7d' }
       );
       
+      // Registrar login en auditoría
+      const clientIP = getClientIP(req);
+      const userAgent = req.headers['user-agent'] || 'desconocido';
+      await logLogin(global.db, user.id, email, clientIP, userAgent);
+      
       return res.json({
         message: 'Login exitoso',
         token,
@@ -86,6 +92,29 @@ class AuthController {
     } catch (error) {
       console.error('Login error:', error);
       return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async logout(req, res) {
+    try {
+      const { logLogout, getClientIP } = require('../utils/auditLogger');
+      
+      // Registrar logout en auditoría
+      const clientIP = getClientIP(req);
+      const userAgent = req.headers['user-agent'] || 'desconocido';
+      await logLogout(global.db, req.userId, clientIP, userAgent);
+
+      return res.json({
+        message: 'Logout exitoso',
+        success: true
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Aunque falle el logging, el logout sigue siendo válido
+      return res.json({
+        message: 'Logout exitoso',
+        success: true
+      });
     }
   }
 
@@ -655,9 +684,12 @@ class InventoryController {
           id: result.id,
           tipo_ayuda_id: result.tipo_ayuda_id,
           cantidad: result.cantidad,
-          costo_unitario: result.costo_unitario,
+          fecha_caducidad: result.fecha_caducidad,
+          lote: result.lote,
+          estado: result.estado,
           municipio: result.municipio,
-          ubicacion_almacen: result.ubicacion_almacen
+          ubicacion_almacen: result.ubicacion_almacen,
+          observaciones: result.observaciones
         }
       });
     } catch (error) {
@@ -703,12 +735,15 @@ class InventoryController {
   static async update(req, res) {
     try {
       const { Inventory } = require('../models');
-      const { cantidad, costo_unitario, municipio, ubicacion_almacen } = req.body;
+      const { cantidad, fecha_caducidad, lote, estado, municipio, ubicacion_almacen, observaciones } = req.body;
       const inventory = await Inventory.update(req.params.id, {
         cantidad,
-        costo_unitario,
+        fecha_caducidad,
+        lote,
+        estado,
         municipio,
-        ubicacion_almacen
+        ubicacion_almacen,
+        observaciones
       });
       return res.json({ message: 'Inventario actualizado correctamente', inventory });
     } catch (error) {

@@ -10,6 +10,7 @@ router.post('/login', AuthController.login);
 
 // Rutas protegidas
 router.use(verifyToken, setCurrentUser);
+router.post('/logout', AuthController.logout);
 router.get('/profile', AuthController.getProfile);
 router.get('/users', AuthController.getAllUsers);
 

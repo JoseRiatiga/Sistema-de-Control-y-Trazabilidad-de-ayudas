@@ -383,20 +383,22 @@ class AidDelivery {
 // Modelo para Inventario
 class Inventory {
   static async create(inventoryData) {
-    // Primero verificar si existe un item similar (mismo tipo, municipio y costo)
-    // Nota: No se considera ubicacion_almacen para evitar duplicados
+    // Primero verificar si existe un item similar (mismo tipo, municipio, lote y estado)
+    // Nota: Se agrupan por lote para mantener trazabilidad de donaciones
     const findQuery = `
       SELECT id, cantidad FROM inventario
       WHERE tipo_ayuda_id = $1 
       AND municipio = $2 
-      AND costo_unitario = $3
+      AND COALESCE(lote, '') = COALESCE($3, '')
+      AND estado = $4
       LIMIT 1
     `;
     
     const findValues = [
       inventoryData.tipo_ayuda_id,
       inventoryData.municipio,
-      inventoryData.costo_unitario
+      inventoryData.lote || null,
+      inventoryData.estado || 'disponible'
     ];
     
     const existingResult = await global.db.query(findQuery, findValues);
@@ -421,17 +423,20 @@ class Inventory {
     // Si no existe, crear uno nuevo
     const id = uuidv4();
     const createQuery = `
-      INSERT INTO inventario (id, tipo_ayuda_id, cantidad, costo_unitario, municipio, ubicacion_almacen)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO inventario (id, tipo_ayuda_id, cantidad, fecha_caducidad, lote, estado, municipio, ubicacion_almacen, observaciones)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
     const createValues = [
       id,
       inventoryData.tipo_ayuda_id,
       inventoryData.cantidad,
-      inventoryData.costo_unitario,
+      inventoryData.fecha_caducidad || null,
+      inventoryData.lote || null,
+      inventoryData.estado || 'disponible',
       inventoryData.municipio,
-      inventoryData.ubicacion_almacen
+      inventoryData.ubicacion_almacen || null,
+      inventoryData.observaciones || null
     ];
     
     const result = await global.db.query(createQuery, createValues);
@@ -507,14 +512,14 @@ class Inventory {
     return result.rows;
   }
 
-  static async update(inventoryId, { cantidad, costo_unitario, municipio, ubicacion_almacen }) {
+  static async update(inventoryId, { cantidad, fecha_caducidad, lote, estado, municipio, ubicacion_almacen, observaciones }) {
     const query = `
       UPDATE inventario
-      SET cantidad = $2, costo_unitario = $3, municipio = $4, ubicacion_almacen = $5, actualizado_en = CURRENT_TIMESTAMP
+      SET cantidad = $2, fecha_caducidad = $3, lote = $4, estado = $5, municipio = $6, ubicacion_almacen = $7, observaciones = $8, actualizado_en = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
     `;
-    const result = await global.db.query(query, [inventoryId, cantidad, costo_unitario, municipio, ubicacion_almacen]);
+    const result = await global.db.query(query, [inventoryId, cantidad, fecha_caducidad || null, lote || null, estado || 'disponible', municipio, ubicacion_almacen || null, observaciones || null]);
     if (result.rows.length === 0) {
       throw new Error('Inventario no encontrado');
     }

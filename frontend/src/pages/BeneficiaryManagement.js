@@ -141,7 +141,13 @@ function BeneficiaryManagement() {
       resetMessages();
       await fetchBeneficiaries();
     } catch (err) {
-      setError('Error eliminando beneficiario: ' + (err.response?.data?.error || err.message));
+      // Detectar error de clave foránea y mostrar mensaje más amigable
+      const errorMessage = err.response?.data?.error || err.message;
+      if (errorMessage.includes('foreign key') || errorMessage.includes('entregas_ayuda')) {
+        setError('No se puede eliminar este beneficiario porque tiene entregas registradas en el sistema. Esto se mantiene para preservar el historial de auditoría.');
+      } else {
+        setError('Error eliminando beneficiario: ' + errorMessage);
+      }
     } finally {
       setLoading(false);
     }

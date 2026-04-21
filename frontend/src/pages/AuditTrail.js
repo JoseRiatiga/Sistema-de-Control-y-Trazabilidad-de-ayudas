@@ -24,6 +24,15 @@ function AuditTrail() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewedAlert, setViewedAlert] = useState(null);
 
+  // Filtros para Registro de Cambios
+  const [changelogFilters, setChangelogFilters] = useState({
+    accion: '', // LOGIN, LOGOUT, CREATE, UPDATE, DELETE
+    tabla: '', // Nombre de tabla
+    usuario: '', // Búsqueda por usuario
+    fechaDesde: '',
+    fechaHasta: ''
+  });
+
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -41,6 +50,77 @@ function AuditTrail() {
     };
     if (!tableName) return 'N/A';
     return tableMapping[tableName] || tableName.replace(/_/g, ' ').toUpperCase();
+  };
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 AuditTrail Debug:');
+    console.log('  user:', user);
+    console.log('  user?.rol:', user?.rol);
+    console.log('  isAdmin:', isAdmin);
+  }, [user, isAdmin]);
+
+  // Filtrar datos del changelog
+  const getFilteredAuditData = () => {
+    return auditData.filter(entry => {
+      const accion = (entry.accion || entry.action || '').toUpperCase();
+      const tabla = (entry.nombre_tabla || entry.table_name || '').toLowerCase();
+      const usuario = (entry.user_name || 'Sistema').toLowerCase();
+      const fecha = new Date(entry.fecha || entry.timestamp);
+
+      // Filtro por acción
+      if (changelogFilters.accion && !accion.includes(changelogFilters.accion.toUpperCase())) {
+        return false;
+      }
+
+      // Filtro por tabla
+      if (changelogFilters.tabla && !tabla.includes(changelogFilters.tabla.toLowerCase())) {
+        return false;
+      }
+
+      // Filtro por usuario (búsqueda)
+      if (changelogFilters.usuario && !usuario.includes(changelogFilters.usuario.toLowerCase())) {
+        return false;
+      }
+
+      // Filtro por fecha desde
+      if (changelogFilters.fechaDesde) {
+        const fechaDesde = new Date(changelogFilters.fechaDesde);
+        fechaDesde.setHours(0, 0, 0, 0);
+        if (fecha < fechaDesde) {
+          return false;
+        }
+      }
+
+      // Filtro por fecha hasta
+      if (changelogFilters.fechaHasta) {
+        const fechaHasta = new Date(changelogFilters.fechaHasta);
+        fechaHasta.setHours(23, 59, 59, 999);
+        if (fecha > fechaHasta) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setChangelogFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const resetFilters = () => {
+    setChangelogFilters({
+      accion: '',
+      tabla: '',
+      usuario: '',
+      fechaDesde: '',
+      fechaHasta: ''
+    });
   };
 
   // Debug logging
@@ -416,33 +496,196 @@ function AuditTrail() {
 
           {activeTab === 'change-log' && (
             <div className="card">
-              <h2>Registro de Cambios</h2>
-              {auditData.length === 0 ? (
-                <p>No hay cambios registrados</p>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Fecha/Hora</th>
-                      <th>Usuario</th>
-                      <th>Acción</th>
-                      <th>Recurso Modificado</th>
-                      <th>Detalles</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditData.slice(0, 50).map(entry => (
-                      <tr key={entry.id}>
-                        <td>{new Date(entry.fecha || entry.timestamp).toLocaleString()}</td>
-                        <td>{entry.user_name || 'Sistema'}</td>
-                        <td>{entry.accion || entry.action}</td>
-                        <td>{translateTableName(entry.nombre_tabla || entry.table_name)}</td>
-                        <td>{(entry.accion || entry.action) === 'UPDATE' ? 'Modificado' : 'Creado'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <h2>Registro de Cambios Completo del Sistema</h2>
+              
+              {/* Filtros */}
+              <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '14px' }}>🔍 Filtros</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Tipo de Acción:
+                    </label>
+                    <select
+                      name="accion"
+                      value={changelogFilters.accion}
+                      onChange={handleFilterChange}
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                      <option value="">-- Todas --</option>
+                      <option value="LOGIN">🔐 Login</option>
+                      <option value="LOGOUT">🚪 Logout</option>
+                      <option value="CREATE">✅ Crear</option>
+                      <option value="UPDATE">✏️ Editar</option>
+                      <option value="DELETE">🗑️ Eliminar</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Recurso:
+                    </label>
+                    <select
+                      name="tabla"
+                      value={changelogFilters.tabla}
+                      onChange={handleFilterChange}
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                      <option value="">-- Todos --</option>
+                      <option value="sesiones_usuarios">Sesiones de Usuarios</option>
+                      <option value="censados">Beneficiarios</option>
+                      <option value="entregas_ayuda">Entregas de Ayuda</option>
+                      <option value="inventario">Inventario</option>
+                      <option value="usuarios">Usuarios</option>
+                      <option value="tipos_ayuda">Tipos de Ayuda</option>
+                      <option value="alertas_duplicidad">Alertas de Duplicidad</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Usuario:
+                    </label>
+                    <input
+                      type="text"
+                      name="usuario"
+                      value={changelogFilters.usuario}
+                      onChange={handleFilterChange}
+                      placeholder="Buscar por nombre..."
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Desde:
+                    </label>
+                    <input
+                      type="date"
+                      name="fechaDesde"
+                      value={changelogFilters.fechaDesde}
+                      onChange={handleFilterChange}
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Hasta:
+                    </label>
+                    <input
+                      type="date"
+                      name="fechaHasta"
+                      value={changelogFilters.fechaHasta}
+                      onChange={handleFilterChange}
+                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      onClick={resetFilters}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        backgroundColor: '#95a5a6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🔄 Limpiar Filtros
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabla */}
+              {(() => {
+                const filteredData = getFilteredAuditData();
+                return filteredData.length === 0 ? (
+                  <p>No hay registros que coincidan con los filtros seleccionados</p>
+                ) : (
+                  <>
+                    <p style={{ marginBottom: '10px', color: '#7f8c8d' }}>
+                      Mostrando <strong>{filteredData.length}</strong> de <strong>{auditData.length}</strong> registros
+                    </p>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Fecha/Hora</th>
+                          <th>Usuario</th>
+                          <th>Acción</th>
+                          <th>Recurso</th>
+                          <th>Detalles</th>
+                          <th>IP del Cliente</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredData.slice(0, 100).map(entry => {
+                          const isSessionEvent = entry.nombre_tabla === 'sesiones_usuarios';
+                          const accion = entry.accion || entry.action;
+                          
+                          return (
+                            <tr key={entry.id} style={{ backgroundColor: isSessionEvent ? '#f0f8ff' : 'inherit' }}>
+                              <td>{new Date(entry.fecha || entry.timestamp).toLocaleString('es-ES')}</td>
+                              <td>{entry.user_name || 'Sistema'}</td>
+                              <td>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold',
+                                  backgroundColor: 
+                                    accion === 'LOGIN' ? '#27ae60' :
+                                    accion === 'LOGOUT' ? '#e74c3c' :
+                                    accion === 'CREATE' ? '#3498db' :
+                                    accion === 'UPDATE' ? '#f39c12' :
+                                    accion === 'DELETE' ? '#c0392b' :
+                                    '#95a5a6',
+                                  color: 'white',
+                                  fontSize: '12px'
+                                }}>
+                                  {accion === 'LOGIN' ? '🔐 LOGIN' : 
+                                   accion === 'LOGOUT' ? '🚪 LOGOUT' :
+                                   accion === 'CREATE' ? '✅ CREAR' :
+                                   accion === 'UPDATE' ? '✏️ EDITAR' :
+                                   accion === 'DELETE' ? '🗑️ ELIMINAR' :
+                                   accion}
+                                </span>
+                              </td>
+                              <td>
+                                {isSessionEvent ? '👤 Sesión de Usuario' : translateTableName(entry.nombre_tabla || entry.table_name)}
+                              </td>
+                              <td>
+                                {isSessionEvent ? (
+                                  accion === 'LOGIN' ? '✓ Inició sesión' : 'Cerró sesión'
+                                ) : (
+                                  accion === 'UPDATE' ? 'Datos modificados' : 
+                                  accion === 'DELETE' ? 'Registro eliminado' :
+                                  'Datos registrados'
+                                )}
+                              </td>
+                              <td style={{ fontSize: '11px', color: '#7f8c8d' }}>
+                                {entry.direccion_ip || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {filteredData.length > 100 && (
+                      <p style={{ marginTop: '10px', fontStyle: 'italic', color: '#7f8c8d' }}>
+                        Mostrando los primeros 100 de {filteredData.length} registros
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </>

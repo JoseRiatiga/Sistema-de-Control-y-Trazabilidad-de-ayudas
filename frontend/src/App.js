@@ -46,13 +46,30 @@ function App() {
     setUser(userData);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userRole'); // Eliminar el rol
-    setToken(null);
-    setIsAuthenticated(false);
-    setUser(null);
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Llamar a la API de logout para registrar el evento en auditoría
+      if (token) {
+        await fetch(`${process.env.REACT_APP_API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch(err => console.log('Error al registrar logout:', err));
+      }
+    } catch (err) {
+      console.log('Error en logout:', err);
+    } finally {
+      // Limpiar datos locales
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      setToken(null);
+      setIsAuthenticated(false);
+      setUser(null);
+    }
   };
 
   const handleThemeChange = (newTheme) => {

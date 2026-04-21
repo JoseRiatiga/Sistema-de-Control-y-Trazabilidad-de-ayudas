@@ -46,9 +46,12 @@ CREATE TABLE IF NOT EXISTS inventario (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tipo_ayuda_id UUID NOT NULL REFERENCES tipos_ayuda(id),
   cantidad INT NOT NULL DEFAULT 0,
-  costo_unitario DECIMAL(10, 2),
+  fecha_caducidad DATE,
+  lote VARCHAR(50),
+  estado VARCHAR(50) DEFAULT 'disponible' CHECK (estado IN ('disponible', 'dañado', 'vencido', 'retirado')),
   municipio VARCHAR(100) NOT NULL,
   ubicacion_almacen VARCHAR(255),
+  observaciones TEXT,
   recibido_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -168,3 +171,10 @@ SELECT
 FROM alertas_duplicidad dad
 JOIN censados c ON dad.censado_id = c.id
 GROUP BY c.municipio;
+
+-- Agregar columna de valor referencial para reportes de auditoría
+-- Nota: Este valor es SOLO para reportes, NO para operaciones de inventario
+ALTER TABLE tipos_ayuda 
+  ADD COLUMN valor_referencial DECIMAL(10, 2);
+
+COMMENT ON COLUMN tipos_ayuda.valor_referencial IS 'Valor referencial para reportes de auditoría. NO se utiliza en operaciones de inventario de ayudas humanitarias';

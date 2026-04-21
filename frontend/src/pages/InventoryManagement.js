@@ -14,15 +14,18 @@ function InventoryManagement() {
   
   // Estados para el formulario de agregación
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null); // Nuevo: para saber si estamos editando
+  const [editingId, setEditingId] = useState(null);
   const [aidTypes, setAidTypes] = useState([]);
   const [loadingAidTypes, setLoadingAidTypes] = useState(false);
   const [formData, setFormData] = useState({
     tipo_ayuda_id: '',
     cantidad: '',
-    costo_unitario: '',
+    fecha_caducidad: '',
+    lote: '',
+    estado: 'disponible',
     municipio: '',
-    ubicacion_almacen: ''
+    ubicacion_almacen: '',
+    observaciones: ''
   });
   const [formErrors, setFormErrors] = useState({});
 
@@ -83,21 +86,13 @@ function InventoryManagement() {
     return selectedAid && selectedAid.nombre.toLowerCase() === 'donaciones';
   };
 
-  const calculateTotalValue = () => {
-    return inventory.reduce((total, item) => {
-      const value = (parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0);
-      return total + value;
-    }, 0);
-  };
-
   const validateForm = () => {
     const errors = {};
-    const isDonation = aidTypes.some(aid => aid.id === formData.tipo_ayuda_id && aid.nombre.toLowerCase() === 'donaciones');
     
     if (!formData.tipo_ayuda_id) errors.tipo_ayuda_id = 'Selecciona un tipo de ayuda';
-    if (!isDonation && (!formData.cantidad || formData.cantidad <= 0)) errors.cantidad = 'La cantidad debe ser mayor a 0';
+    if (!formData.cantidad || formData.cantidad <= 0) errors.cantidad = 'La cantidad debe ser mayor a 0';
     if (!formData.municipio) errors.municipio = 'Selecciona un municipio';
-    if (!formData.costo_unitario || formData.costo_unitario < 0) errors.costo_unitario = 'Ingresa un costo unitario válido';
+    if (!formData.fecha_caducidad) errors.fecha_caducidad = 'La fecha de caducidad es requerida';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -109,15 +104,6 @@ function InventoryManagement() {
       ...formData,
       [name]: value
     };
-    
-    // Si cambia el tipo de ayuda
-    if (name === 'tipo_ayuda_id') {
-      const selectedAid = aidTypes.find(aid => aid.id === value);
-      if (selectedAid && selectedAid.nombre.toLowerCase() === 'donaciones') {
-        // Para donaciones, establecer cantidad a 1 (no aplica pero necesario para la BD)
-        updatedData.cantidad = '1';
-      }
-    }
     
     // Si cambia el municipio, actualizar automáticamente la ubicación
     if (name === 'municipio' && WAREHOUSE_LOCATIONS[value]) {
@@ -149,9 +135,12 @@ function InventoryManagement() {
       const inventoryData = {
         tipo_ayuda_id: formData.tipo_ayuda_id,
         cantidad: parseInt(formData.cantidad),
-        costo_unitario: parseFloat(formData.costo_unitario),
+        fecha_caducidad: formData.fecha_caducidad || null,
+        lote: formData.lote || null,
+        estado: formData.estado || 'disponible',
         municipio: formData.municipio,
-        ubicacion_almacen: formData.ubicacion_almacen || ''
+        ubicacion_almacen: formData.ubicacion_almacen || '',
+        observaciones: formData.observaciones || null
       };
 
       let response;
@@ -168,12 +157,16 @@ function InventoryManagement() {
         setSuccessMessage(successMsg);
       }
       
+      // Resetear formulario
       setFormData({
         tipo_ayuda_id: '',
         cantidad: '',
-        costo_unitario: '',
+        fecha_caducidad: '',
+        lote: '',
+        estado: 'disponible',
         municipio: '',
-        ubicacion_almacen: ''
+        ubicacion_almacen: '',
+        observaciones: ''
       });
       setEditingId(null);
       setShowForm(false);
@@ -189,7 +182,7 @@ function InventoryManagement() {
     }
   };
 
-  const getUniqueМunicipalities = () => {
+  const getUniqueMunicipalities = () => {
     return COLOMBIAN_MUNICIPALITIES;
   };
 
@@ -197,9 +190,12 @@ function InventoryManagement() {
     setFormData({
       tipo_ayuda_id: item.tipo_ayuda_id,
       cantidad: item.cantidad,
-      costo_unitario: item.costo_unitario,
+      fecha_caducidad: item.fecha_caducidad ? item.fecha_caducidad.split('T')[0] : '',
+      lote: item.lote || '',
+      estado: item.estado || 'disponible',
       municipio: item.municipio,
-      ubicacion_almacen: item.ubicacion_almacen
+      ubicacion_almacen: item.ubicacion_almacen || '',
+      observaciones: item.observaciones || ''
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -210,9 +206,12 @@ function InventoryManagement() {
     setFormData({
       tipo_ayuda_id: '',
       cantidad: '',
-      costo_unitario: '',
+      fecha_caducidad: '',
+      lote: '',
+      estado: 'disponible',
       municipio: '',
-      ubicacion_almacen: ''
+      ubicacion_almacen: '',
+      observaciones: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -235,6 +234,16 @@ function InventoryManagement() {
         setError('Error al eliminar inventario: ' + (err.response?.data?.message || err.message));
         console.error(err);
       }
+    }
+  };
+
+  const getEstadoColor = (estado) => {
+    switch(estado) {
+      case 'disponible': return '#27ae60';
+      case 'dañado': return '#e74c3c';
+      case 'vencido': return '#f39c12';
+      case 'retirado': return '#95a5a6';
+      default: return '#2c3e50';
     }
   };
 
@@ -273,87 +282,126 @@ function InventoryManagement() {
         {/* Formulario de adición de inventario */}
         {showForm && (
           <div className="inventory-form">
-            <h3>Agregar Nuevo Item de Inventario</h3>
+            <h3>{editingId ? 'Editar Item de Inventario' : 'Agregar Nuevo Item de Inventario'}</h3>
             <form onSubmit={handleAddInventory}>
-              <div className="form-group">
-                <label htmlFor="tipo_ayuda_id">Tipo de Ayuda: *</label>
-                <select
-                  id="tipo_ayuda_id"
-                  name="tipo_ayuda_id"
-                  value={formData.tipo_ayuda_id}
-                  onChange={handleFormChange}
-                  disabled={loadingAidTypes}
-                >
-                  <option value="">-- Selecciona un tipo de ayuda --</option>
-                  {aidTypes.map(aid => (
-                    <option key={aid.id} value={aid.id}>{aid.nombre}</option>
-                  ))}
-                </select>
-                {formErrors.tipo_ayuda_id && <span className="error-message">{formErrors.tipo_ayuda_id}</span>}
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="tipo_ayuda_id">Tipo de Ayuda: *</label>
+                  <select
+                    id="tipo_ayuda_id"
+                    name="tipo_ayuda_id"
+                    value={formData.tipo_ayuda_id}
+                    onChange={handleFormChange}
+                    disabled={loadingAidTypes}
+                  >
+                    <option value="">-- Selecciona un tipo de ayuda --</option>
+                    {aidTypes.map(aid => (
+                      <option key={aid.id} value={aid.id}>{aid.nombre}</option>
+                    ))}
+                  </select>
+                  {formErrors.tipo_ayuda_id && <span className="error-message">{formErrors.tipo_ayuda_id}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="cantidad">Cantidad: *</label>
+                  <input
+                    type="number"
+                    id="cantidad"
+                    name="cantidad"
+                    value={formData.cantidad}
+                    onChange={handleFormChange}
+                    min="1"
+                    placeholder="Ej: 100"
+                  />
+                  {formErrors.cantidad && <span className="error-message">{formErrors.cantidad}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="municipio">Municipio: *</label>
+                  <select
+                    id="municipio"
+                    name="municipio"
+                    value={formData.municipio}
+                    onChange={handleFormChange}
+                  >
+                    <option value="">-- Selecciona un municipio --</option>
+                    {getUniqueMunicipalities().map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  {formErrors.municipio && <span className="error-message">{formErrors.municipio}</span>}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="cantidad">Cantidad: {!isDonations() && '*'}</label>
-                <input
-                  type="number"
-                  id="cantidad"
-                  name="cantidad"
-                  value={formData.cantidad}
-                  onChange={handleFormChange}
-                  min="1"
-                  placeholder="Ej: 100"
-                  disabled={isDonations()}
-                  className={isDonations() ? 'input-disabled' : ''}
-                />
-                {isDonations() && <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>No aplica para donaciones</small>}
-                {formErrors.cantidad && <span className="error-message">{formErrors.cantidad}</span>}
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="fecha_caducidad">Fecha de Caducidad: *</label>
+                  <input
+                    type="date"
+                    id="fecha_caducidad"
+                    name="fecha_caducidad"
+                    value={formData.fecha_caducidad}
+                    onChange={handleFormChange}
+                  />
+                  {formErrors.fecha_caducidad && <span className="error-message">{formErrors.fecha_caducidad}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="lote">Lote/Número de Donación:</label>
+                  <input
+                    type="text"
+                    id="lote"
+                    name="lote"
+                    value={formData.lote}
+                    onChange={handleFormChange}
+                    placeholder="Ej: LOTE-001 o DON-2026-04"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="estado">Estado:</label>
+                  <select
+                    id="estado"
+                    name="estado"
+                    value={formData.estado}
+                    onChange={handleFormChange}
+                  >
+                    <option value="disponible">Disponible</option>
+                    <option value="dañado">Dañado</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="retirado">Retirado</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="costo_unitario">Costo Unitario: *</label>
-                <input
-                  type="number"
-                  id="costo_unitario"
-                  name="costo_unitario"
-                  value={formData.costo_unitario}
-                  onChange={handleFormChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej: 25.50"
-                />
-                {formErrors.costo_unitario && <span className="error-message">{formErrors.costo_unitario}</span>}
-              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="ubicacion_almacen">Ubicación del Almacén:</label>
+                  <input
+                    type="text"
+                    id="ubicacion_almacen"
+                    name="ubicacion_almacen"
+                    value={formData.ubicacion_almacen}
+                    readOnly
+                    className="input-readonly"
+                    placeholder="Se asigna automáticamente según el municipio"
+                  />
+                  <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>
+                    Se asigna automáticamente según el municipio seleccionado
+                  </small>
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="municipio">Municipio: *</label>
-                <select
-                  id="municipio"
-                  name="municipio"
-                  value={formData.municipio}
-                  onChange={handleFormChange}
-                >
-                  <option value="">-- Selecciona un municipio --</option>
-                  {getUniqueМunicipalities().map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-                {formErrors.municipio && <span className="error-message">{formErrors.municipio}</span>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="ubicacion_almacen">Ubicación del Almacén:</label>
-                <input
-                  type="text"
-                  id="ubicacion_almacen"
-                  name="ubicacion_almacen"
-                  value={formData.ubicacion_almacen}
-                  readOnly
-                  className="input-readonly"
-                  placeholder="Se asigna automáticamente según el municipio"
-                />
-                <small style={{ color: '#7f8c8d', marginTop: '4px', display: 'block' }}>
-                  La ubicación se asigna automáticamente según el municipio seleccionado
-                </small>
+                <div className="form-group full-width">
+                  <label htmlFor="observaciones">Observaciones:</label>
+                  <textarea
+                    id="observaciones"
+                    name="observaciones"
+                    value={formData.observaciones}
+                    onChange={handleFormChange}
+                    placeholder="Ej: Caja abierta, producto húmedo, etc."
+                    rows="3"
+                  />
+                </div>
               </div>
 
               <div className="form-actions">
@@ -375,54 +423,69 @@ function InventoryManagement() {
               <p>No hay items en inventario</p>
             ) : (
               <>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Municipio</th>
-                      <th>Tipo de Ayuda</th>
-                      <th>Cantidad</th>
-                      <th>Unidad</th>
-                      <th>Costo Unitario</th>
-                      <th>Valor Total</th>
-                      <th>Ubicación</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inventory.map(item => {
-                      const isDonationItem = item.aid_type_name && item.aid_type_name.toLowerCase() === 'donaciones';
-                      return (
-                      <tr key={item.id}>
-                        <td>{item.municipio}</td>
-                        <td>{item.aid_type_name}</td>
-                        <td className={isDonationItem ? 'donation-cell' : ''}>{isDonationItem ? 'N/A' : (item.cantidad || 0)}</td>
-                        <td className={isDonationItem ? 'donation-cell' : ''}>{isDonationItem ? 'N/A' : item.unidad}</td>
-                        <td>${(parseFloat(item.costo_unitario) || 0).toFixed(2)}</td>
-                        <td>${isDonationItem ? (parseFloat(item.costo_unitario) || 0).toFixed(2) : ((parseFloat(item.cantidad) || 0) * (parseFloat(item.costo_unitario) || 0)).toFixed(2)}</td>
-                        <td>{item.ubicacion_almacen}</td>
-                        <td>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => handleEditInventory(item)}
-                            title="Editar inventario"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteInventory(item.id, item.aid_type_name, item.cantidad)}
-                            title="Eliminar inventario"
-                          >
-                            Eliminar
-                          </button>
-                        </td>
+                <div className="table-responsive">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Municipio</th>
+                        <th>Tipo de Ayuda</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Caducidad</th>
+                        <th>Lote</th>
+                        <th>Estado</th>
+                        <th>Ubicación</th>
+                        <th>Observaciones</th>
+                        <th>Acciones</th>
                       </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div className="summary">
-                  <h3>Valor Total de Inventario: ${calculateTotalValue().toFixed(2)}</h3>
+                    </thead>
+                    <tbody>
+                      {inventory.map(item => {
+                        const estaVencido = item.fecha_caducidad && new Date(item.fecha_caducidad) < new Date();
+                        return (
+                        <tr key={item.id} style={{ backgroundColor: estaVencido && item.estado !== 'vencido' ? '#fff3cd' : 'inherit' }}>
+                          <td>{item.municipio}</td>
+                          <td>{item.aid_type_name}</td>
+                          <td>{item.cantidad}</td>
+                          <td>{item.unidad}</td>
+                          <td>{item.fecha_caducidad ? new Date(item.fecha_caducidad).toLocaleDateString('es-CO') : '-'}</td>
+                          <td>{item.lote || '-'}</td>
+                          <td>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: getEstadoColor(item.estado),
+                              color: 'white',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {item.estado.charAt(0).toUpperCase() + item.estado.slice(1)}
+                            </span>
+                          </td>
+                          <td>{item.ubicacion_almacen || '-'}</td>
+                          <td>{item.observaciones || '-'}</td>
+                          <td>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleEditInventory(item)}
+                              title="Editar inventario"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDeleteInventory(item.id, item.aid_type_name, item.cantidad)}
+                              title="Eliminar inventario"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </>
             )}
