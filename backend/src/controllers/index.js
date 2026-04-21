@@ -25,11 +25,19 @@ class AuthController {
         return res.status(400).json({ error: 'El email ya está registrado' });
       }
       
+      // Validar longitud mínima de contraseña
+      if (password.length < 6) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+      }
+      
+      // Hashear la contraseña con bcryptjs (salt rounds: 10)
+      const hashedPassword = await bcrypt.hash(password, 10);
+      console.log(`🔒 Contraseña hasheada para nuevo usuario: ${email}`);
 
       const user = await User.create({
         nombre,
         email,
-        contraseña_hash: password,
+        contraseña_hash: hashedPassword,
         rol,
         telefono,
         municipio
@@ -60,11 +68,14 @@ class AuthController {
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
       }
       
-      // Verificar contraseña (sin hashear para proyecto universitario)
-      const passwordMatch = (password === user.contraseña_hash);
+      // Verificar contraseña usando bcryptjs (comparar con hash)
+      const passwordMatch = await bcrypt.compare(password, user.contraseña_hash);
       if (!passwordMatch) {
+        console.log(`❌ Intento de login fallido para ${email}: contraseña incorrecta`);
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
       }
+      
+      console.log(`✓ Login exitoso: ${email} (Hash verificado correctamente)`);
       
       // Generar JWT
       const token = jwt.sign(
@@ -202,6 +213,7 @@ class AuthController {
     try {
       const { passwordActual, passwordNueva } = req.body;
       const userId = req.userId;
+      const { auditLog } = require('../middleware/auth');
 
       // Validar campos requeridos
       if (!passwordActual || !passwordNueva) {
@@ -212,6 +224,11 @@ class AuthController {
       if (passwordNueva.length < 6) {
         return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
       }
+      
+      // Prevenir que la nueva contraseña sea igual a la anterior
+      if (passwordActual === passwordNueva) {
+        return res.status(400).json({ error: 'La nueva contraseña debe ser diferente a la actual' });
+      }
 
       // Obtener usuario actual
       const user = await User.findById(userId);
@@ -219,14 +236,36 @@ class AuthController {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      // Verificar contraseña actual
-      const passwordMatch = (passwordActual === user.contraseña_hash);
+      // Verificar contraseña actual usando bcryptjs
+      const passwordMatch = await bcrypt.compare(passwordActual, user.contraseña_hash);
       if (!passwordMatch) {
         return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
       }
 
+      // Hashear nueva contraseña
+      const hashedPassword = await bcrypt.hash(passwordNueva, 10);
+      
       // Actualizar contraseña
-      await User.update(userId, { contraseña_hash: passwordNueva });
+      await User.update(userId, { contraseña_hash: hashedPassword });
+      
+      // Registrar en auditoría
+      const context = {
+        tipo_operacion: 'Cambio de contraseña',
+        descripcion_detallada: `El usuario ${user.email} cambió su contraseña de forma segura`,
+        usuario_afectado: {
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol
+        },
+        metodo_seguridad: 'Contraseña hasheada con bcryptjs (salt rounds: 10)'
+      };
+      
+      await auditLog('CAMBIO_CONTRASEÑA', 'usuarios', userId, 
+        { contraseña_actualizada: false }, 
+        { contraseña_actualizada: true, metodo: 'bcryptjs' }, 
+        req, context);
+      
+      console.log(`🔒 Contraseña actualizada de forma segura para: ${user.email}`);
 
       return res.json({
         mensaje: 'Contraseña cambiada correctamente'
