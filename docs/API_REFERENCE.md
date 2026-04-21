@@ -1,4 +1,6 @@
-# API REST Endpoints - Sistema de Ayudas Humanitarias
+# API REST Endpoints - Sistema de Ayudas Humanitarias v1.2.0
+
+**Última actualización:** 21 de abril de 2026
 
 ## Base URL
 ```
@@ -13,36 +15,79 @@ Content-Type: application/json
 
 ---
 
-## 1. AUTENTICACIÓN
+## 1. AUTENTICACIÓN (v1.2.0)
 
-### Registrar Usuario
+### Registrar Usuario (con Email Verification)
 ```
 POST /auth/register
 Content-Type: application/json
 
 {
-  "name": "Juan Operador",
+  "nombre": "Juan Operador",
   "email": "operador@example.com",
   "password": "password123",
-  "role": "operador|admin|auditor",
-  "phone": "555-1234",
-  "municipality": "La Paz"
+  "rol": "operador|administrador|auditor",
+  "telefono": "555-1234",
+  "municipio": "La Paz"
 }
 
-Respuesta 201:
+Respuesta 201 Created:
 {
-  "message": "Usuario creado exitosamente",
+  "message": "Usuario registrado correctamente. Verifica tu email para activar la cuenta.",
   "user": {
-    "id": "uuid",
-    "name": "Juan Operador",
+    "id": "uuid...",
+    "nombre": "Juan Operador",
     "email": "operador@example.com",
-    "role": "operador",
-    "municipality": "La Paz"
-  }
+    "rol": "operador",
+    "email_verificado": false
+  },
+  "instrucciones": "Se ha enviado un link de verificación a tu email. Tiene validez de 24 horas."
 }
+
+Nota: Se envía email automático con link de verificación válido por 24 horas.
 ```
 
-### Iniciar Sesión
+### Verificar Email
+```
+GET /auth/verify-email?token=xxxxx
+
+Respuesta 200 OK:
+{
+  "message": "Email verificado correctamente!",
+  "usuario": {
+    "id": "uuid...",
+    "nombre": "Juan Operador",
+    "email": "operador@example.com",
+    "email_verificado": true
+  },
+  "instrucciones": "Ya puedes loguear en el sistema"
+}
+
+Errores:
+- 400: Token requerido
+- 404: Token inválido o expirado
+- 401: Token expirado
+```
+
+### Reenviar Email de Verificación
+```
+POST /auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "operador@example.com"
+}
+
+Respuesta 200 OK:
+{
+  "message": "Se ha enviado un nuevo link de verificación a tu email",
+  "instrucciones": "El link tiene validez de 24 horas"
+}
+
+Nota: Por seguridad, no devuelve error si el email no existe
+```
+
+### Iniciar Sesión (requiere email_verificado=true)
 ```
 POST /auth/login
 Content-Type: application/json
@@ -52,18 +97,22 @@ Content-Type: application/json
   "password": "password123"
 }
 
-Respuesta 200:
+Respuesta 200 OK:
 {
   "message": "Login exitoso",
   "token": "eyJhbGciOiJIUzI1NiIs...",
   "user": {
     "id": "uuid",
-    "name": "Juan Operador",
+    "nombre": "Juan Operador",
     "email": "operador@example.com",
-    "role": "operador",
-    "municipality": "La Paz"
+    "rol": "operador",
+    "municipio": "La Paz"
   }
 }
+
+Errores:
+- 401: Usuario o contraseña incorrectos
+- 403: Email no verificado (include require_verification: true)
 ```
 
 ### Obtener Perfil
@@ -74,12 +123,32 @@ Authorization: Bearer <TOKEN>
 Respuesta 200:
 {
   "id": "uuid",
-  "name": "Juan Operador",
+  "nombre": "Juan Operador",
   "email": "operador@example.com",
-  "role": "operador",
-  "phone": "555-1234",
-  "municipality": "La Paz"
+  "rol": "operador",
+  "telefono": "555-1234",
+  "municipio": "La Paz",
+  "email_verificado": true
 }
+```
+
+### Cambiar Contraseña
+```
+PUT /auth/perfil/cambiar-password
+Authorization: Bearer <TOKEN>
+Content-Type: application/json
+
+{
+  "passwordActual": "password123",
+  "passwordNueva": "newpassword456"
+}
+
+Respuesta 200 OK:
+{
+  "mensaje": "Contraseña cambiada correctamente"
+}
+
+Nota: Cambio se registra en auditoría con contexto completo (IP, User-Agent, etc)
 ```
 
 ---

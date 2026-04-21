@@ -2,9 +2,9 @@
 
 Sistema integral para la gestión, control y auditoría de ayudas humanitarias con enfoque en transparencia y prevención de duplicidades.
 
-**Versión:** 1.1.0  
-**Estado:** [OK] Completamente funcional  
-**Última actualización:** 21 de febrero de 2026
+**Versión:** 1.2.0  
+**Estado:** [OK] Completamente funcional - Producción Ready  
+**Última actualización:** 21 de abril de 2026
 
 ## Características Principales
 
@@ -87,16 +87,34 @@ Sistema integral para la gestión, control y auditoría de ayudas humanitarias c
 - [OK] Formato profesional imprimible
 - [OK] Un comprobante por evento de registro (agrupa múltiples ítems)
 
+### 9. Seguridad y Autenticación (v1.2.0)
+- [OK] **Password Hashing:** Contraseñas hasheadas con bcryptjs (10 salt rounds)
+- [OK] **Email Verification:** Sistema de verificación de email con SendGrid
+  - Token de 24 horas válido
+  - Envío automático de email de verificación
+  - Bloqueo de login hasta verificar email
+  - Reenvío de verificación bajo demanda
+- [OK] **JWT Security:** Tokens con expiración de 7 días
+- [OK] **Role-Based Access Control (RBAC):** Permiso por rol (admin, operador, auditor)
+- [OK] **Enhanced Audit Logging:** Registro de auditoría ultra-completo con:
+  - Detección de IP del cliente (con soporte para proxies)
+  - Parsing de User-Agent (navegador, SO, dispositivo)
+  - Cambios antes/después con contexto completo
+  - Información del usuario (nombre, email, rol, municipio)
+  - Timestamps precisos
+- [OK] **Duplicate Delivery Prevention:** Detección de entregas duplicadas en 30 días
+
 ## Stack Tecnológico
 
 ### Backend
 - **Runtime:** Node.js con Express 4.18.2
 - **Base de Datos:** PostgreSQL 12+
 - **Autenticación:** JWT (jsonwebtoken 9.0.0)
-- **Encriptación:** bcryptjs 2.4.3 para contraseñas
+- **Encriptación:** bcryptjs 2.4.3 para hashing de contraseñas
+- **Email Service:** @sendgrid/mail 8.1.6 para verificación de emails
 - **Excel Generation:** ExcelJS 4.3.0 (formato profesional con estilos)
 - **CSV Generation:** json2csv 6.0.0 (conversión de datos a CSV)
-- **PDF Generation:** PDFKit 0.13.0
+- **PDF Generation:** PDFKit 0.13.0 y @react-pdf/renderer 4.3.2
 - **Gestión de Ambiente:** dotenv 16.0.3
 - **CORS:** cors 2.8.5
 - **Otros:** uuid 9.0.0, pg 8.9.0, moment 2.29.4, multer 1.4.5
@@ -291,16 +309,33 @@ Copy-Item .env.example .env
 
 **Editar `backend/.env`:**
 ```
+# Base de Datos PostgreSQL
 DB_USER=postgres
 DB_PASSWORD=tu_contraseña_postgresql
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=ayudas_humanitarias
+
+# Seguridad
 JWT_SECRET=tu_secreto_super_secreto_cambiar_en_produccion
+JWT_EXPIRATION=7d
 NODE_ENV=development
 PORT=5000
+
+# CORS y Frontend
 CORS_ORIGIN=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
+
+# Email Verification (SendGrid) - v1.2.0
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxx_reemplazar_con_tu_clave_sendgrid
+SENDGRID_FROM_EMAIL=noreply@sistemayudas.com
 ```
+
+**Configurar SendGrid (IMPORTANTE para email verification):**
+1. Crear cuenta en https://sendgrid.com
+2. Crear API Key en Settings → API Keys → Create API Key
+3. Copiar la clave y pegarla en `SENDGRID_API_KEY`
+4. Configurar dominio autorizado en Sender Authentication
 
 **Iniciar servidor:**
 ```bash

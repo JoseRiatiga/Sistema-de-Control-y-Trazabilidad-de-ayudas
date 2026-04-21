@@ -1,6 +1,6 @@
-# Sistema de Control y Trazabilidad de Ayudas Humanitarias
+# Sistema de Control y Trazabilidad de Ayudas Humanitarias - Arquitectura v1.2.0
 
-## Arquitectura del Proyecto
+**Última actualización:** 21 de abril de 2026
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -222,23 +222,49 @@ App.js (Componente raíz)
 5. Ver registro de cambios
 6. Generar reportes para entes de control
 
-## Seguridad
+## Seguridad (v1.2.0)
 
-### Implementado
-- ✅ JWT para autenticación
-- ✅ Bcrypt para hashear contraseñas
-- ✅ CORS configurado
-- ✅ Control de acceso por roles
-- ✅ Auditoría de cambios
-- ✅ Hash de verificación en comprobantes
+### Implementado ✅
+- ✅ **JWT** para autenticación con expiración 7 días
+- ✅ **Bcryptjs** para hashear contraseñas (10 salt rounds) - v1.2.0
+- ✅ **Email Verification** con SendGrid (tokens 24h) - v1.2.0
+- ✅ **CORS** configurado con dominio específico
+- ✅ **Role-Based Access Control (RBAC)** - admin, operador, auditor
+- ✅ **Enhanced Audit Logging** - IP, User-Agent, cambios completos - v1.2.0
+  - Detección de IP del cliente (soporta proxies: x-forwarded-for, x-real-ip)
+  - Parsing de User-Agent (navegador, SO, tipo de dispositivo)
+  - Registro de cambios antes/después con contexto
+  - Información del usuario (nombre, email, rol, municipio)
+  - Timestamps precisos de UTC
+- ✅ **Duplicate Delivery Prevention** - detecta entregas en últimos 30 días
+- ✅ **Hash de verificación** en comprobantes de entrega
+
+### Flujo de Autenticación Segura (v1.2.0)
+```
+Usuario → Registro
+  ↓
+Contraseña hasheada con bcryptjs (10 rounds)
+  ↓
+Email de verificación enviado por SendGrid
+  ↓
+Usuario abre link (válido 24h)
+  ↓
+Email marcado como verificado
+  ↓
+Permite Login con JWT de 7 días
+  ↓
+Cada cambio registrado en auditoría con IP + dispositivo
+```
 
 ### Recomendaciones Futuras
-- [ ] HTTPS obligatorio
-- [ ] Autenticación 2FA
-- [ ] Rate limiting
-- [ ] Encriptación de datos sensibles
-- [ ] Backup automático
-- [ ] Logs centralizados
+- [ ] HTTPS obligatorio en producción
+- [ ] Autenticación 2FA por SMS/TOTP
+- [ ] Rate limiting en endpoints de autenticación
+- [ ] Encriptación de datos sensibles en reposo
+- [ ] Backup automático con encriptación
+- [ ] Logs centralizados (ELK Stack, CloudWatch)
+- [ ] WAF (Web Application Firewall)
+- [ ] Monitoreo de intentos de acceso fallidos
 
 ## Rendimiento
 
@@ -278,5 +304,5 @@ tar -czf backup_$(date +%Y%m%d).tar.gz /path/to/app
 
 ---
 
-Versión: 1.0.0
-Fecha: 17 de febrero de 2026
+Versión: 1.2.0
+Fecha: 21 de abril de 2026

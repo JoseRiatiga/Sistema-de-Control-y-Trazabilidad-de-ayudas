@@ -1,4 +1,6 @@
-# Guía de Instalación y Uso
+# Guía de Instalación y Uso - v1.2.0
+
+**Última actualización:** 21 de abril de 2026
 
 ## Instalación Rápida
 
@@ -14,6 +16,15 @@ psql -U ayudas_user -d ayudas_humanitarias -f database/schema.sql
 
 # Insertar datos de ejemplo (opcional)
 psql -U ayudas_user -d ayudas_humanitarias -f database/seeds.sql
+
+# Ejecutar migración para email verification (v1.2.0)
+psql -U ayudas_user -d ayudas_humanitarias << 'EOF'
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verificado BOOLEAN DEFAULT false;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS token_verificacion VARCHAR(255);
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS fecha_expiracion_token TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_usuarios_token_verificacion ON usuarios(token_verificacion);
+CREATE INDEX IF NOT EXISTS idx_usuarios_email_verificado ON usuarios(email_verificado);
+EOF
 ```
 
 ### 2. Configurar Backend
@@ -29,6 +40,8 @@ cp .env.example .env
 # DB_PASSWORD=tu_contraseña
 # DB_NAME=ayudas_humanitarias
 # JWT_SECRET=tu_secreto_jwt_aqui
+# SENDGRID_API_KEY=tu_clave_sendgrid
+# SENDGRID_FROM_EMAIL=noreply@sistemayudas.com
 
 # Instalar dependencias
 npm install
@@ -38,6 +51,12 @@ npm run dev
 
 # El servidor estará en http://localhost:5000
 ```
+
+**Configuración SendGrid (v1.2.0):**
+1. Crear cuenta en https://sendgrid.com (gratuito con límites)
+2. Ir a Settings → API Keys → Create API Key
+3. Copiar clave y pegarla en `SENDGRID_API_KEY`
+4. Configurar dominio en Sender Authentication (recomendado pero opcional para pruebas)
 
 ### 3. Configurar Frontend
 
@@ -53,39 +72,86 @@ npm start
 # Se abrirá http://localhost:3000
 ```
 
+## Características de Seguridad v1.2.0
+
+### Email Verification
+- **Flujo:** Registro → Email de verificación → Link de 24h → Activación
+- **Sistema:** SendGrid para envío automático de emails
+- **Bloqueo:** Login rechazado hasta verificar email
+- **Reenvío:** Disponible en Settings → Enviar Verificación
+
+### Password Security
+- **Hashing:** bcryptjs con 10 salt rounds
+- **Almacenamiento:** Nunca se guarda en texto plano
+- **Comparación:** Verificación segura en login y cambio de contraseña
+
+### Enhanced Audit Logging
+- **IP Detection:** Extrae IP del cliente (soporta proxies)
+- **Device Info:** Detecta navegador, SO, tipo de dispositivo
+- **Change Tracking:** Registro antes/después de cambios
+- **Full Context:** Usuario, municipio, rol, email, timestamps
+
 ## Usuarios de Prueba
 
 Después de ejecutar seeds.sql:
 
-### Admin
-- Email: admin@ayudas.com
-- Password: (Hash - requiere reset)
+### Admin (con email verificado)
+- Email: admin@sistemayudas.com
+- Password: admin123 (pre-hasheada en seeds)
+- Rol: administrador
+- Email verificado: Sí ✓
 
-### Operador
-- Email: operador.lapaz@ayudas.com
-- Password: (Hash - requiere reset)
-
-### Auditor
-- Email: auditor@ayudas.com
-- Password: (Hash - requiere reset)
-
-Para crear usuarios de prueba con contraseñas funcionales:
+Para crear más usuarios de prueba:
 
 ```bash
+# POST /api/auth/register - Sin verificación previa (envía email automático)
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Usuario Prueba",
+    "nombre": "Usuario Prueba",
     "email": "prueba@test.com",
     "password": "password123",
-    "role": "operador",
-    "municipality": "La Paz"
+    "rol": "operador",
+    "municipio": "La Paz"
   }'
+
+# Respuesta esperada (201 Created):
+{
+  "message": "Usuario registrado correctamente. Verifica tu email para activar la cuenta.",
+  "user": {
+    "id": "uuid...",
+    "nombre": "Usuario Prueba",
+    "email": "prueba@test.com",
+    "rol": "operador",
+    "email_verificado": false
+  },
+  "instrucciones": "Se ha enviado un link de verificación a tu email. Tiene validez de 24 horas."
+}
+
+# Usuario debe:
+# 1. Revisar email
+# 2. Hacer click en link de verificación
+# 3. Intentar login (antes fallaba por email_verificado=false)
+```
+
+**Reenvío de Verificación:**
+```bash
+curl -X POST http://localhost:5000/api/auth/resend-verification \
+  -H "Content-Type: application/json" \
+  -d '{"email": "prueba@test.com"}'
 ```
 
 ## Flujos de Trabajo
 
-### 1. Registrar una Entrega de Ayuda
+### 1. Crear Usuario Nuevo (Admin)
+
+1. Abrir panel → Gestión de Usuarios
+2. Click en "Crear Nuevo Usuario"
+3. Llenar formulario con nombre, email, rol, municipio
+4. Sistema envía email de verificación automáticamente
+5. Nuevo usuario debe verificar email antes de login
+
+### 2. Registrar una Entrega de Ayuda
 
 1. Ir a "Registrar Ayuda"
 2. Seleccionar beneficiario de la lista (vinculado con censo)
@@ -95,8 +161,9 @@ curl -X POST http://localhost:5000/api/auth/register \
 6. Agregar observaciones si es necesario
 7. Click en "Registrar Ayuda"
 8. Sistema genera comprobante digital automáticamente
+9. Cambio registrado en auditoría con IP, navegador, usuario completo
 
-### 2. Generar Comprobante Digital
+### 3. Generar Comprobante Digital
 
 1. Al registrar una ayuda se genera automáticamente
 2. Ir a sección de "Recibos" (en desarrollo)
