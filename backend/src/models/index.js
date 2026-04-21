@@ -262,7 +262,7 @@ class AidType {
     
     const query = `
       UPDATE tipos_ayuda
-      SET nombre = $1, descripcion = $2, unidad = $3, actualizado_en = NOW()
+      SET nombre = $1, descripcion = $2, unidad = $3
       WHERE id = $4
       RETURNING *
     `;

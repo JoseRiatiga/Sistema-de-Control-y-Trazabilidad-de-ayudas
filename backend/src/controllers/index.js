@@ -429,13 +429,13 @@ class AidTypeController {
     try {
       const { AidType } = require('../models');
       const { id } = req.params;
-      const { nombre } = req.body;
+      const { nombre, descripcion, unidad } = req.body;
 
       if (!nombre) {
         return res.status(400).json({ error: 'El nombre del tipo de ayuda es requerido' });
       }
 
-      const result = await AidType.update(id, { nombre });
+      const result = await AidType.update(id, { nombre, descripcion, unidad });
       
       if (!result) {
         return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
