@@ -59,6 +59,7 @@ function Login({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
+              autoComplete="current-password"
             />
           </div>
 
