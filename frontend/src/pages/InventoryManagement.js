@@ -264,7 +264,7 @@ function InventoryManagement() {
               onChange={(e) => setMunicipality(e.target.value)}
             >
               <option value="">-- Todos los Municipios --</option>
-              {getUniqueМunicipalities().map(m => (
+              {getUniqueMunicipalities().map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
