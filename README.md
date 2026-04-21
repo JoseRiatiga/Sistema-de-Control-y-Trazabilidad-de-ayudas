@@ -2,8 +2,8 @@
 
 Sistema integral para la gestión, control y auditoría de ayudas humanitarias con enfoque en transparencia y prevención de duplicidades.
 
-**Versión:** 1.2.0  
-**Estado:** [OK] Completamente funcional - Producción Ready  
+**Versión:** 2.0.0  
+**Estado:** [OK] Producción
 **Última actualización:** 21 de abril de 2026
 
 ## Características Principales
@@ -810,19 +810,92 @@ Get-Process -Name "node" | Stop-Process -Force
 ---
 
 **Sistema:** Sistema de Control y Trazabilidad de Ayudas Humanitarias  
-**Versión:** 1.1.0  
-**Estado:** Funcional  
-**Última actualización:** 21 de febrero de 2026  
+**Versión:** 1.2.0  
+**Estado:** Producción
+**Última actualización:** 21 de abril de 2026  
 **Licencia:** ISC  
 **Autor:** Jose Riatiga  
 
 ## Changelog Reciente
 
+### v1.2.0 - 21 de abril de 2026
+- [NEW] **Email Verification:** Sistema completo de verificación de email con SendGrid
+  - Tokens de 24 horas automáticamente generados
+  - Bloqueo de login hasta verificar email
+  - Endpoint de reenvío de verificación bajo demanda
+  - Columnas en BD: email_verificado, token_verificacion, fecha_expiracion_token
+- [NEW] **Password Hashing:** Implementación de bcryptjs (10 salt rounds)
+  - Todas las contraseñas hasheadas y nunca en texto plano
+  - Verificación segura en login y cambio de contraseña
+  - Prevención de ataques de fuerza bruta
+- [NEW] **Enhanced Audit Logging:** Auditoría ultra-completa v1.2.0
+  - Detección automática de IP del cliente (soporta proxies)
+  - Parsing de User-Agent (navegador, SO, tipo de dispositivo)
+  - Cambios antes/después con contexto completo
+  - Información del usuario (nombre, email, rol, municipio)
+  - Timestamps precisos en UTC
+- [IMPROVE] **Seguridad:** JWT tokens con expiración de 7 días configurable
+- [IMPROVE] **API Endpoints:** Nuevos endpoints para verificación de email
+- [IMPROVE] **Documentación:** Actualización completa de API_REFERENCE.md, INSTALACION.md, ARQUITECTURA.md
+- [FIX] **Controllers:** Retorno consistente de `user` en respuesta de registro (v1.2.0)
+- [REMOVE] **Code Cleanup:** Eliminación de archivos de debug (debug.js, test-db-connection.js)
+- [REMOVE] **Code Cleanup:** Eliminación de funciones no utilizadas (translateStatus, translateAction, translateTableName)
+
 ### v1.1.0 - 21 de febrero de 2026
-- [NEW] **Nuevo:** Exportación de reportes en Excel (.xlsx) con ExcelJS
-- [NEW] **Nuevo:** Encabezado profesional en Excel con metadatos del reporte
-- [NEW] **Nuevo:** Autoajuste inteligente de ancho de columnas
-- [NEW] **Nuevo:** Dos botones en interfaz: "Descargar Excel" y "Descargar CSV"
-- [FIX] **Fix:** Corrección de encoding UTF-8 en CSV con BOM
-- [IMPROVE] **Mejora:** Información del usuario que generó el reporte en encabezado
-- [IMPROVE] **Mejora:** Formato vertical en encabezado Excel para mejor legibilidad
+- [NEW] **Exportación de reportes en Excel (.xlsx) con ExcelJS**
+- [NEW] **Encabezado profesional en Excel con metadatos del reporte**
+- [NEW] **Autoajuste inteligente de ancho de columnas**
+- [NEW] **Dos botones en interfaz: "Descargar Excel" y "Descargar CSV"**
+- [FIX] **Corrección de encoding UTF-8 en CSV con BOM**
+- [IMPROVE] **Información del usuario que generó el reporte en encabezado**
+- [IMPROVE] **Formato vertical en encabezado Excel para mejor legibilidad**
+
+---
+
+**Sistema:** Sistema de Control y Trazabilidad de Ayudas Humanitarias  
+**Versión:** 2.0.0  
+**Estado:** Producción
+**Última actualización:** 21 de abril de 2026  
+**Licencia:** ISC  
+**Autor:** Jose Riatiga  
+
+## Changelog Reciente
+
+### v2.0.0 - 21 de abril de 2026 🚀 MAJOR RELEASE
+**Cambio significativo:** Transición de proyecto local a sistema completamente desplegado en producción
+
+#### Despliegue en Producción
+- [NEW] **Frontend deployado en Vercel:** https://sistema-de-control-y-trazabilidad-d.vercel.app
+- [NEW] **Base de datos PostgreSQL en Supabase:** Configurada y conectada
+- [NEW] **Dominio personalizado ready:** Para production deployment
+- [NEW] **Variables de entorno configuradas:** En Render y Vercel
+- [NEW] **SSL/TLS habilitado:** En todos los endpoints
+
+#### Seguridad Implementada (v2.0.0)
+- [NEW] **Email Verification:** Sistema completo con SendGrid
+  - Tokens de 24 horas automáticamente generados
+  - Bloqueo de login hasta verificar email
+  - Endpoint de reenvío de verificación bajo demanda
+- [NEW] **Password Hashing:** Implementación de bcryptjs (10 salt rounds)
+  - Todas las contraseñas hasheadas
+  - Verificación segura en login
+  - Prevención de ataques de fuerza bruta
+- [NEW] **Enhanced Audit Logging:** Auditoría ultra-completa
+  - Detección automática de IP del cliente
+  - Parsing de User-Agent (navegador, SO, dispositivo)
+  - Cambios antes/después con contexto completo
+- [NEW] **Role-Based Access Control (RBAC):** Completamente implementado
+- [NEW] **JWT Security:** Tokens con expiración de 7 días
+
+#### Code Quality & Maintenance
+- [REMOVE] **Code Cleanup:** Eliminación de archivos de debug
+- [REMOVE] **Code Cleanup:** Eliminación de funciones no utilizadas
+- [IMPROVE] **Documentación:** Actualización completa de docs/ a v2.0.0
+- [IMPROVE] **API Consistency:** Normalización de respuestas
+- [IMPROVE] **Error Handling:** Mejoras en manejo de errores
+
+#### Performance & Reliability
+- [NEW] **Health Check Endpoint:** GET /health para monitoreo
+- [NEW] **Error Handling Global:** Middleware centralizado
+- [NEW] **Connection Pooling:** Optimización de conexiones a BD
+- [NEW] **CORS Configurado:** Con origen específico para seguridad
