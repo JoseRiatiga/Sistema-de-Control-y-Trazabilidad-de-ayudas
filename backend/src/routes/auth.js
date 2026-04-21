@@ -7,6 +7,8 @@ const router = express.Router();
 // Rutas públicas
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
+router.get('/verify-email', AuthController.verifyEmail);
+router.post('/resend-verification', AuthController.resendVerificationEmail);
 
 // Rutas protegidas
 router.use(verifyToken, setCurrentUser);

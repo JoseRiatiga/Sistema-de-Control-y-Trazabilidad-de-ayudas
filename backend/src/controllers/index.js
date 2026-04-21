@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const { sendVerificationEmail } = require('../utils/emailService');
+const crypto = require('crypto');
 
 // Controlador de Autenticación
 class AuthController {
@@ -34,18 +36,47 @@ class AuthController {
       const hashedPassword = await bcrypt.hash(password, 10);
       console.log(`🔒 Contraseña hasheada para nuevo usuario: ${email}`);
 
+      // Generar token de verificación (válido por 24 horas)
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const expirationDate = new Date();
+      expirationDate.setHours(expirationDate.getHours() + 24);
+
       const user = await User.create({
         nombre,
         email,
         contraseña_hash: hashedPassword,
         rol,
         telefono,
-        municipio
+        municipio,
+        email_verificado: false,
+        token_verificacion: verificationToken,
+        fecha_expiracion_token: expirationDate
       });
       
+      // Construir URL de verificación
+      const frontendUrl = process.env.FRONTEND_URL || 'https://sistema-ayudas.vercel.app';
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+      // Enviar email de verificación
+      const emailResult = await sendVerificationEmail(
+        email,
+        nombre,
+        verificationToken,
+        verificationUrl
+      );
+
+      console.log(`📧 Email de verificación enviado a: ${email}`);
+
       return res.status(201).json({
-        message: 'Usuario creado exitosamente',
-        user
+        message: 'Usuario registrado correctamente. Verifica tu email para activar la cuenta.',
+        usuario: {
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol,
+          email_verificado: false
+        },
+        instrucciones: 'Se ha enviado un link de verificación a tu email. Tiene validez de 24 horas.'
       });
     } catch (error) {
       console.error('Register error:', error);
@@ -73,6 +104,15 @@ class AuthController {
       if (!passwordMatch) {
         console.log(`❌ Intento de login fallido para ${email}: contraseña incorrecta`);
         return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+      }
+
+      // Verificar que el email esté validado
+      if (!user.email_verificado) {
+        return res.status(403).json({ 
+          error: 'Email no verificado',
+          message: 'Por favor verifica tu email antes de continuar. Se ha enviado un link a tu email.',
+          require_verification: true
+        });
       }
       
       console.log(`✓ Login exitoso: ${email} (Hash verificado correctamente)`);
@@ -126,6 +166,159 @@ class AuthController {
         message: 'Logout exitoso',
         success: true
       });
+    }
+  }
+
+  // VERIFICACIÓN DE EMAIL
+  static async verifyEmail(req, res) {
+    try {
+      const { token } = req.query;
+
+      if (!token) {
+        return res.status(400).json({ error: 'Token de verificación requerido' });
+      }
+
+      // Buscar usuario con este token
+      const query = `
+        SELECT id, nombre, email, email_verificado, fecha_expiracion_token
+        FROM usuarios
+        WHERE token_verificacion = $1
+      `;
+      
+      const result = await global.db.query(query, [token]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Token inválido o expirado' });
+      }
+
+      const user = result.rows[0];
+
+      // Verificar si ya fue verificado
+      if (user.email_verificado) {
+        return res.json({
+          message: 'Email ya fue verificado anteriormente',
+          verified: true
+        });
+      }
+
+      // Verificar si el token expiró
+      const now = new Date();
+      const expirationDate = new Date(user.fecha_expiracion_token);
+      
+      if (now > expirationDate) {
+        return res.status(401).json({ 
+          error: 'Token expirado. Solicita un nuevo link de verificación.' 
+        });
+      }
+
+      // Marcar email como verificado
+      const updateQuery = `
+        UPDATE usuarios
+        SET email_verificado = true,
+            token_verificacion = NULL,
+            fecha_expiracion_token = NULL
+        WHERE id = $1
+        RETURNING id, nombre, email, email_verificado
+      `;
+
+      const updateResult = await global.db.query(updateQuery, [user.id]);
+      const verifiedUser = updateResult.rows[0];
+
+      // Registrar en auditoría
+      const { auditLog } = require('../middleware/auth');
+      global.currentUserId = user.id;
+      
+      await auditLog('VERIFICACION_EMAIL', 'usuarios', user.id,
+        { email_verificado: false },
+        { email_verificado: true },
+        req,
+        {
+          tipo_operacion: 'Verificación de email',
+          email_verificado_para: user.email,
+          metodo: 'Link de verificación'
+        }
+      );
+
+      console.log(`✅ Email verificado correctamente para: ${user.email}`);
+
+      return res.json({
+        message: 'Email verificado correctamente!',
+        usuario: {
+          id: verifiedUser.id,
+          nombre: verifiedUser.nombre,
+          email: verifiedUser.email,
+          email_verificado: true
+        },
+        instrucciones: 'Ya puedes loguear en el sistema'
+      });
+    } catch (error) {
+      console.error('Verify email error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  // REENVIAR EMAIL DE VERIFICACIÓN
+  static async resendVerificationEmail(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email requerido' });
+      }
+
+      // Buscar usuario
+      const user = await User.findByEmail(email);
+      
+      if (!user) {
+        // Por seguridad, no decir si el email existe o no
+        return res.json({
+          message: 'Si el email está registrado, recibirás un nuevo link de verificación'
+        });
+      }
+
+      // Si ya está verificado
+      if (user.email_verificado) {
+        return res.json({
+          message: 'Tu email ya fue verificado. Puedes loguear directamente.'
+        });
+      }
+
+      // Generar nuevo token
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const expirationDate = new Date();
+      expirationDate.setHours(expirationDate.getHours() + 24);
+
+      // Actualizar token
+      const updateQuery = `
+        UPDATE usuarios
+        SET token_verificacion = $1,
+            fecha_expiracion_token = $2
+        WHERE id = $3
+      `;
+
+      await global.db.query(updateQuery, [verificationToken, expirationDate, user.id]);
+
+      // Construir URL
+      const frontendUrl = process.env.FRONTEND_URL || 'https://sistema-ayudas.vercel.app';
+      const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+
+      // Enviar email
+      await sendVerificationEmail(
+        email,
+        user.nombre,
+        verificationToken,
+        verificationUrl
+      );
+
+      console.log(`📧 Nuevo email de verificación enviado a: ${email}`);
+
+      return res.json({
+        message: 'Se ha enviado un nuevo link de verificación a tu email',
+        instrucciones: 'El link tiene validez de 24 horas'
+      });
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      return res.status(500).json({ error: error.message });
     }
   }
 
