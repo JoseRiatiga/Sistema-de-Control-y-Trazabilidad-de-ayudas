@@ -69,7 +69,7 @@ class AuthController {
 
       return res.status(201).json({
         message: 'Usuario registrado correctamente. Verifica tu email para activar la cuenta.',
-        usuario: {
+        user: {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
