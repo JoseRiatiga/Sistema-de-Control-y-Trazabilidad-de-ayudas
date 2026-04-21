@@ -10,6 +10,8 @@ router.use(verifyToken, setCurrentUser);
 // Rutas para tipos de ayuda (solo admin y operador)
 router.post('/types', verifyRole(['administrador']), AidTypeController.create);
 router.get('/types', AidTypeController.getAll);
+router.put('/types/:id', verifyRole(['administrador']), AidTypeController.update);
+router.delete('/types/:id', verifyRole(['administrador']), AidTypeController.delete);
 
 // Rutas para entregas (operadores y admins)
 // IMPORTANTE: Poner rutas más específicas ANTES que las genéricas

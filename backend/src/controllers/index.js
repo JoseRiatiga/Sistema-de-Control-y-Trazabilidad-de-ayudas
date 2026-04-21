@@ -424,6 +424,60 @@ class AidTypeController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  static async update(req, res) {
+    try {
+      const { AidType } = require('../models');
+      const { id } = req.params;
+      const { nombre } = req.body;
+
+      if (!nombre) {
+        return res.status(400).json({ error: 'El nombre del tipo de ayuda es requerido' });
+      }
+
+      const result = await AidType.update(id, { nombre });
+      
+      if (!result) {
+        return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
+      }
+
+      return res.json({ message: 'Tipo de ayuda actualizado', aidType: result });
+    } catch (error) {
+      console.error('Update aid type error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async delete(req, res) {
+    try {
+      const { AidType } = require('../models');
+      const { id } = req.params;
+
+      // Verificar que no haya inventario o entregas asociadas
+      const { Inventory, AidDelivery } = require('../models');
+      const inventory = await Inventory.getByAidType(id);
+      
+      if (inventory && inventory.length > 0) {
+        return res.status(400).json({ error: 'No se puede eliminar este tipo de ayuda porque hay inventario asociado' });
+      }
+
+      const deliveries = await AidDelivery.getByAidType(id);
+      if (deliveries && deliveries.length > 0) {
+        return res.status(400).json({ error: 'No se puede eliminar este tipo de ayuda porque hay entregas registradas' });
+      }
+
+      const result = await AidType.delete(id);
+      
+      if (!result) {
+        return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
+      }
+
+      return res.json({ message: 'Tipo de ayuda eliminado correctamente' });
+    } catch (error) {
+      console.error('Delete aid type error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 // Controlador de Entregas de Ayuda

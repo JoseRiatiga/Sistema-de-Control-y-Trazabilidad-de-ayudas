@@ -256,6 +256,27 @@ class AidType {
     const result = await global.db.query(query, [id]);
     return result.rows[0];
   }
+
+  static async update(id, aidTypeData) {
+    const { nombre, descripcion, unidad } = aidTypeData;
+    
+    const query = `
+      UPDATE tipos_ayuda
+      SET nombre = $1, descripcion = $2, unidad = $3, actualizado_en = NOW()
+      WHERE id = $4
+      RETURNING *
+    `;
+    
+    const values = [nombre, descripcion || null, unidad || null, id];
+    const result = await global.db.query(query, values);
+    return result.rows[0] || null;
+  }
+
+  static async delete(id) {
+    const query = 'DELETE FROM tipos_ayuda WHERE id = $1 RETURNING *';
+    const result = await global.db.query(query, [id]);
+    return result.rows[0] || null;
+  }
 }
 
 // Modelo para Entregas de Ayuda
@@ -361,6 +382,16 @@ class AidDelivery {
       LIMIT $1 OFFSET $2
     `;
     const result = await global.db.query(query, [limit, offset]);
+    return result.rows;
+  }
+
+  static async getByAidType(tipo_ayuda_id) {
+    const query = `
+      SELECT *
+      FROM entregas_ayuda
+      WHERE tipo_ayuda_id = $1
+    `;
+    const result = await global.db.query(query, [tipo_ayuda_id]);
     return result.rows;
   }
 
@@ -509,6 +540,17 @@ class Inventory {
       ORDER BY i.municipio, ta.nombre
     `;
     const result = await global.db.query(query);
+    return result.rows;
+  }
+
+  static async getByAidType(tipo_ayuda_id) {
+    const query = `
+      SELECT i.*, ta.nombre as aid_type_name, ta.unidad
+      FROM inventario i
+      JOIN tipos_ayuda ta ON i.tipo_ayuda_id = ta.id
+      WHERE i.tipo_ayuda_id = $1
+    `;
+    const result = await global.db.query(query, [tipo_ayuda_id]);
     return result.rows;
   }
 
