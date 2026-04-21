@@ -27,4 +27,7 @@ router.post('/create-user', verifyRole(['administrador']), AuthController.regist
 // Eliminar usuario (solo administrador)
 router.delete('/delete-user/:id', verifyRole(['administrador']), AuthController.deleteUser);
 
+// MIGRACIÓN: Hashear contraseñas antiguas en texto plano (solo administrador)
+router.post('/migrate-passwords', verifyRole(['administrador']), AuthController.migratePasswordsToHash);
+
 module.exports = router;

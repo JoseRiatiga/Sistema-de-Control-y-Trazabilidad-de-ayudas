@@ -346,6 +346,114 @@ class AuthController {
       return res.status(500).json({ error: error.message });
     }
   }
+
+  // MÉTODO DE MIGRACIÓN: Convertir contraseñas en texto plano a hasheadas
+  static async migratePasswordsToHash(req, res) {
+    try {
+      const { auditLog } = require('../middleware/auth');
+      
+      console.log('\n🔐 INICIANDO MIGRACIÓN DE CONTRASEÑAS (VÍA API)...\n');
+
+      // 1. Obtener todos los usuarios
+      const getUsersQuery = 'SELECT id, nombre, email, contraseña_hash FROM usuarios';
+      const result = await global.db.query(getUsersQuery);
+      const users = result.rows;
+
+      console.log(`✓ Se encontraron ${users.length} usuarios para procesar\n`);
+
+      let migratedCount = 0;
+      let alreadyHashedCount = 0;
+      let errorCount = 0;
+      const migratedUsers = [];
+      const errors = [];
+
+      // 2. Procesar cada usuario
+      for (const user of users) {
+        try {
+          const password = user.contraseña_hash;
+
+          // Detectar si ya está hasheada
+          if (password && (password.startsWith('$2a$') || password.startsWith('$2b$'))) {
+            console.log(`✓ [${user.email}] - Ya está hasheada`);
+            alreadyHashedCount++;
+            continue;
+          }
+
+          // Si está vacía o es NULL
+          if (!password) {
+            console.log(`⚠️  [${user.email}] - Contraseña vacía (SALTANDO)`);
+            continue;
+          }
+
+          // Hashear la contraseña
+          const hashedPassword = await bcrypt.hash(password, 10);
+
+          // Actualizar en la base de datos
+          const updateQuery = 'UPDATE usuarios SET contraseña_hash = $1 WHERE id = $2';
+          await global.db.query(updateQuery, [hashedPassword, user.id]);
+
+          console.log(`🔐 [${user.email}] - Contraseña migrada exitosamente`);
+          migratedCount++;
+          migratedUsers.push({
+            id: user.id,
+            nombre: user.nombre,
+            email: user.email,
+            estado: 'migrado'
+          });
+
+          // Registrar en auditoría
+          await auditLog('MIGRACIÓN_CONTRASEÑA', 'usuarios', user.id,
+            { contraseña_hasheada: false },
+            { contraseña_hasheada: true, metodo: 'bcryptjs' },
+            req,
+            {
+              tipo_migración: 'Conversión de texto plano a hash',
+              usuario_migrado: user.email,
+              fecha_migración: new Date().toISOString(),
+              metodo_seguridad: 'bcryptjs (salt rounds: 10)'
+            }
+          );
+        } catch (userError) {
+          console.error(`❌ [${user.email}] - Error: ${userError.message}`);
+          errorCount++;
+          errors.push({
+            email: user.email,
+            error: userError.message
+          });
+        }
+      }
+
+      // 3. Responder con resumen
+      const summary = {
+        mensaje: 'Migración de contraseñas completada',
+        estadísticas: {
+          total_usuarios: users.length,
+          migradas_exitosamente: migratedCount,
+          ya_hasheadas: alreadyHashedCount,
+          errores: errorCount
+        },
+        usuarios_migrados: migratedUsers,
+        errores: errors.length > 0 ? errors : null
+      };
+
+      console.log('\n' + '='.repeat(60));
+      console.log('📊 RESUMEN DE MIGRACIÓN (API)');
+      console.log('='.repeat(60));
+      console.log(`✓ Migradas: ${migratedCount}`);
+      console.log(`✓ Ya hasheadas: ${alreadyHashedCount}`);
+      console.log(`❌ Errores: ${errorCount}`);
+      console.log(`📈 Total: ${migratedCount + alreadyHashedCount}/${users.length}`);
+      console.log('='.repeat(60) + '\n');
+
+      return res.json(summary);
+    } catch (error) {
+      console.error('❌ ERROR CRÍTICO EN MIGRACIÓN:', error.message);
+      return res.status(500).json({
+        error: 'Error en la migración de contraseñas',
+        detalles: error.message
+      });
+    }
+  }
 }
 
 // Controlador de Censo (Beneficiarios)
