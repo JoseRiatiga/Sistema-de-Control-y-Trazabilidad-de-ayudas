@@ -212,47 +212,6 @@ const reportTemplates = {
 };
 
 /**
- * Traduce estados de alertas
- */
-function translateStatus(status) {
-  const translations = {
-    'pendiente': 'Pendiente',
-    'revisada': 'Revisada',
-    'resuelta': 'Resuelta'
-  };
-  return translations[status] || status;
-}
-
-/**
- * Traduce acciones de auditoría
- */
-function translateAction(action) {
-  const translations = {
-    'INSERT': 'Creación',
-    'UPDATE': 'Modificación',
-    'DELETE': 'Eliminación'
-  };
-  return translations[action] || action;
-}
-
-/**
- * Traduce nombres de tablas
- */
-function translateTableName(tableName) {
-  const translations = {
-    'entregas_ayuda': 'Entregas de Ayuda',
-    'censados': 'Beneficiarios',
-    'tipos_ayuda': 'Tipos de Ayuda',
-    'inventario': 'Inventario',
-    'usuarios': 'Usuarios',
-    'alertas_duplicidad': 'Alertas de Duplicidad',
-    'comprobantes_entrega': 'Comprobantes de Entrega',
-    'bitacora_auditoria': 'Bitácora de Auditoría'
-  };
-  return translations[tableName] || tableName.replace(/_/g, ' ').toUpperCase();
-}
-
-/**
  * Obtiene una plantilla por nombre
  */
 function getTemplate(templateName) {
@@ -273,8 +232,5 @@ function getAvailableTemplates() {
 module.exports = {
   reportTemplates,
   getTemplate,
-  getAvailableTemplates,
-  translateStatus,
-  translateAction,
-  translateTableName
+  getAvailableTemplates
 };
