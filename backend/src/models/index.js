@@ -130,21 +130,19 @@ class Censado {
   static async create(censoData) {
     const id = uuidv4();
     const query = `
-      INSERT INTO censados (id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, latitud, longitud, miembros_familia)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO censados (id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, miembros_familia)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id, cedula, primer_nombre, primer_apellido, telefono, email, direccion, municipio, miembros_familia
     `;
     const values = [
       id,
-      censoData.cedula,
-      censoData.primer_nombre,
-      censoData.primer_apellido,
-      censoData.telefono,
-      censoData.email,
-      censoData.direccion,
-      censoData.municipio,
-      censoData.latitud,
-      censoData.longitud,
+      censoData.cedula || null,
+      censoData.primer_nombre || null,
+      censoData.primer_apellido || null,
+      censoData.telefono || null,
+      censoData.email || null,
+      censoData.direccion || null,
+      censoData.municipio || null,
       censoData.miembros_familia || 1
     ];
     
@@ -190,9 +188,7 @@ class Censado {
           email = COALESCE($6, email),
           direccion = COALESCE($7, direccion),
           municipio = COALESCE($8, municipio),
-          latitud = COALESCE($9, latitud),
-          longitud = COALESCE($10, longitud),
-          miembros_familia = COALESCE($11, miembros_familia),
+          miembros_familia = COALESCE($9, miembros_familia),
           actualizado_en = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING *
@@ -206,8 +202,6 @@ class Censado {
       censoData.email,
       censoData.direccion,
       censoData.municipio,
-      censoData.latitud,
-      censoData.longitud,
       censoData.miembros_familia
     ];
 

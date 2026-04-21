@@ -173,9 +173,21 @@ function BeneficiaryManagement() {
 
     try {
       setLoading(true);
+      // Convertir strings vacíos a null para evitar errores de undefined
+      const beneficiaryData = {
+        cedula: newBeneficiaryForm.cedula || null,
+        primer_nombre: newBeneficiaryForm.primer_nombre || null,
+        primer_apellido: newBeneficiaryForm.primer_apellido || null,
+        telefono: newBeneficiaryForm.telefono || null,
+        email: newBeneficiaryForm.email || null,
+        direccion: newBeneficiaryForm.direccion || null,
+        municipio: newBeneficiaryForm.municipio || null,
+        miembros_familia: newBeneficiaryForm.miembros_familia || 1
+      };
+      
       await axios.post(
         `${API_URL}/api/censo`,
-        newBeneficiaryForm,
+        beneficiaryData,
         { headers }
       );
       setMessage('✓ Beneficiario agregado correctamente');
