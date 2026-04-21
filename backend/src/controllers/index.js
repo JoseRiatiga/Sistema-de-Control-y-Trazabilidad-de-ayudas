@@ -837,13 +837,24 @@ class InventoryController {
       
       const action = result.isUpdate ? 'EDITAR' : 'CREAR';
       const context = {
-        tipo: result.isUpdate ? 'Actualización de inventario' : 'Nuevo item de inventario',
-        tipo_ayuda: aidType?.nombre || 'Desconocido',
-        cantidad: result.cantidad,
-        estado: result.estado,
-        municipio: result.municipio,
-        lote: result.lote,
-        fecha_caducidad: result.fecha_caducidad || 'No aplica'
+        tipo_operacion: result.isUpdate ? 'Actualizar cantidad de inventario' : 'Crear nuevo item de inventario',
+        descripcion_detallada: result.isUpdate 
+          ? `Se actualizó la cantidad del producto ${aidType?.nombre || 'desconocido'} en ${result.municipio}`
+          : `Se registró un nuevo item de inventario para ${aidType?.nombre || 'desconocido'}`,
+        datos_principales: {
+          producto: aidType?.nombre || 'Desconocido',
+          unidad_medida: aidType?.unidad || 'Desconocida',
+          cantidad: result.cantidad,
+          estado: result.estado,
+          municipio: result.municipio,
+          ubicacion_almacen: result.ubicacion_almacen
+        },
+        datos_adicionales: {
+          lote: result.lote || 'Sin lote',
+          fecha_caducidad: result.fecha_caducidad || 'No aplica',
+          observaciones: result.observaciones || 'Sin observaciones'
+        },
+        operacion_tipo: result.isUpdate ? 'Actualización' : 'Creación'
       };
       
       await auditLog(action, 'inventario', result.id, null, {
