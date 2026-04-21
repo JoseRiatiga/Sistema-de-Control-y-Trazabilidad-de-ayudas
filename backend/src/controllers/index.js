@@ -400,12 +400,25 @@ class CensoController {
       
       const censado = await Censado.update(id, req.body);
       
+      // Detectar qué cambios específicos se hicieron
+      const changesSummary = [];
+      for (const field of Object.keys(req.body)) {
+        if (oldCensado[field] !== req.body[field]) {
+          changesSummary.push(`${field}: ${oldCensado[field]} → ${req.body[field]}`);
+        }
+      }
+      
       const context = {
-        tipo: 'Actualización de beneficiario',
-        cedula: censado.cedula,
-        nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
-        municipio: censado.municipio,
-        campos_modificados: Object.keys(req.body).join(', ')
+        tipo_operacion: 'Actualizar beneficiario',
+        descripcion_detallada: `Se actualizó la información del beneficiario ${oldCensado.cedula}`,
+        datos_identificacion: {
+          cedula: censado.cedula,
+          nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`
+        },
+        campos_modificados: Object.keys(req.body),
+        resumen_cambios: changesSummary,
+        municipio_anterior: oldCensado.municipio,
+        municipio_nuevo: censado.municipio
       };
       
       await auditLog('EDITAR', 'censados', id, oldCensado, censado, req, context);
@@ -431,10 +444,16 @@ class CensoController {
       const deletedCensado = await Censado.delete(id);
       
       const context = {
-        tipo: 'Eliminación de beneficiario',
-        cedula: censado.cedula,
-        nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
-        municipio: censado.municipio
+        tipo_operacion: 'Eliminar beneficiario',
+        descripcion_detallada: `Se eliminó el registro del beneficiario ${censado.cedula}`,
+        datos_eliminados: {
+          cedula: censado.cedula,
+          nombre_completo: `${censado.primer_nombre} ${censado.primer_apellido}`,
+          municipio: censado.municipio,
+          email: censado.email,
+          telefono: censado.telefono
+        },
+        razon_eliminacion: 'Eliminación de registro'
       };
       
       await auditLog('ELIMINAR', 'censados', id, censado, null, req, context);
@@ -452,7 +471,18 @@ class AidTypeController {
   static async create(req, res) {
     try {
       const { AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
+      
       const aidType = await AidType.create(req.body);
+      
+      const context = {
+        tipo: 'Creación de nuevo tipo de ayuda',
+        nombre: aidType.nombre,
+        unidad: aidType.unidad
+      };
+      
+      await auditLog('CREAR', 'tipos_ayuda', aidType.id, null, aidType, req, context);
+      
       return res.status(201).json({ message: 'Tipo de ayuda creado', aidType });
     } catch (error) {
       console.error('Create aid type error:', error);
@@ -474,11 +504,18 @@ class AidTypeController {
   static async update(req, res) {
     try {
       const { AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const { id } = req.params;
       const { nombre, descripcion, unidad } = req.body;
 
       if (!nombre) {
         return res.status(400).json({ error: 'El nombre del tipo de ayuda es requerido' });
+      }
+      
+      // Obtener valores antiguos
+      const oldAidType = await AidType.findById(id);
+      if (!oldAidType) {
+        return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
       }
 
       const result = await AidType.update(id, { nombre, descripcion, unidad });
@@ -486,6 +523,14 @@ class AidTypeController {
       if (!result) {
         return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
       }
+      
+      const context = {
+        tipo: 'Actualización de tipo de ayuda',
+        nombre_nuevo: result.nombre,
+        campos_modificados: Object.keys(req.body).join(', ')
+      };
+      
+      await auditLog('EDITAR', 'tipos_ayuda', id, oldAidType, result, req, context);
 
       return res.json({ message: 'Tipo de ayuda actualizado', aidType: result });
     } catch (error) {
@@ -497,7 +542,14 @@ class AidTypeController {
   static async delete(req, res) {
     try {
       const { AidType } = require('../models');
+      const { auditLog } = require('../middleware/auth');
       const { id } = req.params;
+      
+      // Obtener datos antes de eliminar
+      const aidType = await AidType.findById(id);
+      if (!aidType) {
+        return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
+      }
 
       // Verificar que no haya inventario o entregas asociadas
       const { Inventory, AidDelivery } = require('../models');
@@ -517,6 +569,14 @@ class AidTypeController {
       if (!result) {
         return res.status(404).json({ error: 'Tipo de ayuda no encontrado' });
       }
+      
+      const context = {
+        tipo: 'Eliminación de tipo de ayuda',
+        nombre: aidType.nombre,
+        unidad: aidType.unidad
+      };
+      
+      await auditLog('ELIMINAR', 'tipos_ayuda', id, aidType, null, req, context);
 
       return res.json({ message: 'Tipo de ayuda eliminado correctamente' });
     } catch (error) {

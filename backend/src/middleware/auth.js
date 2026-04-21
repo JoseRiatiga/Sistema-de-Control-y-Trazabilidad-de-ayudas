@@ -40,14 +40,14 @@ const verifyRole = (allowedRoles) => {
   };
 };
 
-// Middleware para logging de auditoría - versión mejorada
+// Middleware para logging de auditoría - versión COMPLETA y detallada
 const auditLog = async (action, tableName, recordId, oldValues = null, newValues = null, req = null, additionalContext = null) => {
   const query = `
     INSERT INTO bitacora_auditoria (id, accion, nombre_tabla, id_registro, usuario_id, valores_antiguos, valores_nuevos, municipio, direccion_ip, agente_usuario, fecha)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
   `;
   
-  // Extraer IP del cliente
+  // Extraer IP del cliente (soporta proxies)
   const getClientIP = (req) => {
     if (!req) return null;
     return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
@@ -60,30 +60,67 @@ const auditLog = async (action, tableName, recordId, oldValues = null, newValues
   const clientIP = getClientIP(req);
   const userAgent = req?.headers['user-agent'] || null;
   
-  // Obtener municipio del usuario actual
-  let userMunicipio = null;
+  // Obtener información completa del usuario actual
+  let userInfo = {
+    id: global.currentUserId || null,
+    nombre: null,
+    email: null,
+    rol: null,
+    municipio: null
+  };
+  
   if (global.currentUserId) {
     try {
-      const userQuery = 'SELECT municipio FROM usuarios WHERE id = $1';
+      const userQuery = 'SELECT id, nombre, email, rol, municipio FROM usuarios WHERE id = $1';
       const userResult = await global.db.query(userQuery, [global.currentUserId]);
       if (userResult.rows.length > 0) {
-        userMunicipio = userResult.rows[0].municipio;
+        const user = userResult.rows[0];
+        userInfo.nombre = user.nombre;
+        userInfo.email = user.email;
+        userInfo.rol = user.rol;
+        userInfo.municipio = user.municipio;
       }
     } catch (error) {
-      console.error('Error fetching user municipio:', error.message);
+      console.error('Error fetching user info:', error.message);
     }
   }
   
-  // Enriquecer valores con contexto adicional
+  // Función para detectar cambios específicos entre valores antiguos y nuevos
+  const detectChanges = (old, newVal) => {
+    if (!old || !newVal) return null;
+    const changes = {};
+    for (const key in newVal) {
+      if (key === '_contexto') continue;
+      if (JSON.stringify(old[key]) !== JSON.stringify(newVal[key])) {
+        changes[key] = {
+          antes: old[key],
+          despues: newVal[key],
+          tipo_cambio: typeof newVal[key]
+        };
+      }
+    }
+    return Object.keys(changes).length > 0 ? changes : null;
+  };
+  
+  // Enriquecer valores con contexto completo
   let enrichedNewValues = newValues ? { ...newValues } : null;
   let enrichedOldValues = oldValues ? { ...oldValues } : null;
   
-  if (additionalContext) {
-    if (enrichedNewValues) {
-      enrichedNewValues._contexto = additionalContext;
-    } else if (enrichedOldValues) {
-      enrichedOldValues._contexto = additionalContext;
-    }
+  // Crear contexto enriquecido con toda la información
+  const completeContext = {
+    ...additionalContext,
+    usuario: userInfo,
+    accion_tipo: action,
+    tabla_afectada: tableName,
+    timestamp_local: new Date().toLocaleString('es-CO'),
+    navegador_dispositivo: userAgent ? getUserAgentInfo(userAgent) : null,
+    cambios_detectados: detectChanges(oldValues, newValues)
+  };
+  
+  if (enrichedNewValues) {
+    enrichedNewValues._contexto_completo = completeContext;
+  } else if (enrichedOldValues) {
+    enrichedOldValues._contexto_completo = completeContext;
   }
   
   const values = [
@@ -94,17 +131,48 @@ const auditLog = async (action, tableName, recordId, oldValues = null, newValues
     global.currentUserId || null,
     enrichedOldValues ? JSON.stringify(enrichedOldValues) : null,
     enrichedNewValues ? JSON.stringify(enrichedNewValues) : null,
-    userMunicipio,
+    userInfo.municipio,
     clientIP,
     userAgent
   ];
   
   try {
     await global.db.query(query, values);
-    console.log(`✓ Auditoría registrada: ${action} en ${tableName} (IP: ${clientIP})`);
+    console.log(`✓ AUDITORÍA COMPLETA REGISTRADA`);
+    console.log(`  Acción: ${action}`);
+    console.log(`  Tabla: ${tableName}`);
+    console.log(`  Usuario: ${userInfo.nombre} (${userInfo.email})`);
+    console.log(`  Rol: ${userInfo.rol}`);
+    console.log(`  Municipio: ${userInfo.municipio}`);
+    console.log(`  IP: ${clientIP}`);
+    console.log(`  Dispositivo: ${userAgent}`);
   } catch (error) {
     console.error('Error logging audit:', error);
   }
+};
+
+// Función auxiliar para extraer info del User-Agent
+const getUserAgentInfo = (ua) => {
+  let browser = 'Desconocido';
+  let os = 'Desconocido';
+  let device = 'Desktop';
+  
+  if (ua.includes('Chrome')) browser = 'Google Chrome';
+  else if (ua.includes('Safari')) browser = 'Safari';
+  else if (ua.includes('Firefox')) browser = 'Mozilla Firefox';
+  else if (ua.includes('Edge')) browser = 'Microsoft Edge';
+  else if (ua.includes('Opera')) browser = 'Opera';
+  
+  if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+  
+  if (ua.includes('Mobile') || ua.includes('Android')) device = 'Mobile';
+  else if (ua.includes('iPad')) device = 'Tablet';
+  
+  return { browser, os, device };
 };
 
 
