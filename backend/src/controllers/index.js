@@ -25,7 +25,7 @@ class AuthController {
         return res.status(400).json({ error: 'El email ya está registrado' });
       }
       
-      // Crear usuario (sin hashear contraseña para proyecto universitario)
+
       const user = await User.create({
         nombre,
         email,
