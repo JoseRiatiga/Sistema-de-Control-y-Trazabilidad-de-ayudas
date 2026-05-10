@@ -395,3 +395,62 @@
     margin-bottom: 20px;
   }
 }
+
+/* ════════════════════════════════════════════════════════════ */
+/* ACCESIBILIDAD - Contraste mejorado */
+/* ════════════════════════════════════════════════════════════ */
+
+/* Elemento de etiqueta estadística - Mejorado para accesibilidad */
+.stat-item {
+  background: var(--bg-primary);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin: 8px 0;
+  border-left: 4px solid var(--primary);
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  display: block;
+  text-transform: capitalize;
+}
+
+[data-theme="light"] .stat-label {
+  color: #1f2937;
+}
+
+[data-theme="dark"] .stat-label {
+  color: #f3f4f6;
+}
+
+.stat-value-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  margin-top: 4px;
+}
+
+[data-theme="light"] .stat-value-label {
+  color: #1e40af;
+}
+
+[data-theme="dark"] .stat-value-label {
+  color: #60a5fa;
+}
+
+/* Mejorar contraste en elementos de texto secundario */
+.text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-secondary {
+  color: #4b5563 !important;
+}
+
+[data-theme="dark"] .text-secondary {
+  color: #d1d5db !important;
+}

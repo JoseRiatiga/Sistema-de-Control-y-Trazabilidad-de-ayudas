@@ -1,0 +1,26 @@
+# Robots.txt para Sistema de Control y Trazabilidad de Ayudas
+# Generado: 10 de mayo de 2026
+
+User-agent: *
+Allow: /
+Allow: /inicio
+Allow: /ingreso
+Disallow: /admin
+Disallow: /*.json$
+Disallow: /static/
+
+# Información de sitemap
+Sitemap: https://sistema-de-control-y-trazabilidad-d.vercel.app/sitemap.xml
+
+# Crawler delays
+Crawl-delay: 1
+
+# Específico para Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Específico para Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
