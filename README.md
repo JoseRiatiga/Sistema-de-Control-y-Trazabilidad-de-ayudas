@@ -2,9 +2,9 @@
 
 Sistema integral para la gestión, control y auditoría de ayudas humanitarias con enfoque en transparencia y prevención de duplicidades.
 
-**Versión:** 2.0.0  
+**Versión:** 2.1.0  
 **Estado:** [OK] Producción
-**Última actualización:** 21 de abril de 2026
+**Última actualización:** 11 de mayo de 2026
 
 ## Características Principales
 
